@@ -170,8 +170,6 @@ protected:
 
    vector<BaseLearner*> _baseLearners; //!< the learners of the product
    int _numBaseLearners;
-
-private:
    vector< vector<char> > _savedLabels; //!< original labels saved before run
 
 };

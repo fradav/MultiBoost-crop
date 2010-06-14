@@ -240,6 +240,8 @@ namespace MultiBoost {
 			//pTrainingData->clearIndexSet();
 			pWeakHypothesis->setTrainingData(pTrainingData);
 			float energy = pWeakHypothesis->run();
+			//float gamma = pWeakHypothesis->getEdge();
+			//cout << gamma << endl;
 
 			if (_withConstantLearner) // check constant learner if user wants it
 			{

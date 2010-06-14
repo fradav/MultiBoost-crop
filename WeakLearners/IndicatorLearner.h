@@ -63,6 +63,13 @@ class IndicatorLearner : public FeaturewiseLearner
 public:
 
    /**
+   * The constructor.
+   * \date 29/04/2010
+   */
+   IndicatorLearner() : FeaturewiseLearner() {}
+
+
+   /**
    * The destructor. Must be declared (virtual) for the proper destruction of 
    * the object.
    */

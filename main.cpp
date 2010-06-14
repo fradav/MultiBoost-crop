@@ -37,10 +37,10 @@
 *
 * \section intro_sec Introduction
 *
-* <a href="http://www.iro.umontreal.ca/~casagran/multiboost.html">MultiBoost</a> is a multi-class AdaBoost learner, very flexible and 
+* <a href="http://www.multiboost.com">MultiBoost</a> is a multi-class AdaBoost learner, very flexible and
 * well commented. Feel free to use it and to modify it!
 *
-* Copyright (C) 2005-2006 Norman Casagrande, Balazs Kegl and James Bergstra.
+* Copyright (C) 2005-20010 Robert Busa-Fekete, Norman Casagrande, Balazs Kegl.
 * This software is covered by the 
 * <a href="http://www.gnu.org/copyleft/lesser.html">LGPL</a> licence.
 *
@@ -187,7 +187,7 @@ void showBase()
 {
    cout << "MultiBoost (v" << CURRENT_VERSION << "). An obvious name for a multi-class AdaBoost learner." << endl;
    cout << "---------------------------------------------------------------------------" << endl;
-   cout << "Build: " << __DATE__ << " (" << __TIME__ << ") (C) Norman Casagrande 2005-2006" << endl << endl;
+   cout << "Build: " << __DATE__ << " (" << __TIME__ << ") (C) Robert Busa-Fekete, Balazs Kegl, Norman Casagrande 2005-2010" << endl << endl;
    cout << "===> Type --help for help or --static to show the static options" << endl;
 
    exit(0);
