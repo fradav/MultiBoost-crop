@@ -87,6 +87,14 @@ namespace MultiBoost {
 		if ( args.hasArgument("constant") )
 			_withConstantLearner = true;
 
+		// Set the value of the sample size
+		if ( args.hasArgument("Cn") )
+		{
+			args.getValue("Cn", 0, _Cn);
+			if (_verbose > 1)
+				cout << "--> Resampling size: " << _Cn << endl;
+		}
+
 	}
 
 	// -----------------------------------------------------------------------------------

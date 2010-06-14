@@ -360,6 +360,7 @@ int main(int argc, const char* argv[])
    args.declareArgument("slowresumeprocess", "Compute the results in each iteration (slow resume)\n"
 										 "Compute only the data of the last iteration (fast resume, default)\n", 0, "" );
    args.declareArgument("weights", "Outputs the weights of instances at the end of the learning process", 1, "<filename>" );
+   args.declareArgument("Cn", "Resampling size for FilterBoost (default=300)", 1, "<val>" );
    //// ignored for the moment!
    //args.declareArgument("arffheader", "Specify the arff header.", 1, "<arffHeaderFile>");
 
