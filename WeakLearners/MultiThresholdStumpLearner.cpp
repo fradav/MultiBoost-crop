@@ -32,7 +32,7 @@
  *
  */
 
-#include "MultiStumpLearner.h"
+#include "MultiThresholdStumpLearner.h"
 
 #include "IO/Serialization.h"
 #include "IO/SortedData.h"
@@ -42,32 +42,19 @@
 #include <limits> // for numeric_limits<>
 namespace MultiBoost {
 
-REGISTER_LEARNER(MultiStumpLearner)
+REGISTER_LEARNER(MultiThresholdStumpLearner)
 
 // ------------------------------------------------------------------------------
 
-float MultiStumpLearner::run() {
+float MultiThresholdStumpLearner::run() {
 	const int numClasses = _pTrainingData->getNumClasses();
 	const int numColumns = _pTrainingData->getNumAttributes();
-
-	// set the size of selected columns
-	_selectedColumnArray.resize( numClasses );
-	fill( _selectedColumnArray.begin(), _selectedColumnArray.end(), -1 );
-
-	// for storing the class-wise maximal edge
-	vector<float> classwiseEdge(numClasses);
-	fill(classwiseEdge.begin(), classwiseEdge.end(), -numeric_limits<float>::max() );
-
-	//
-	_v.resize(numClasses);
-	_thresholds.reserve(numClasses);
 
 	// set the smoothing value to avoid numerical problem
 	// when theta=0.
 	setSmoothingVal(1.0 / (float) _pTrainingData->getNumExamples() * 0.01);
 
 	vector<sRates> mu(numClasses); // The class-wise rates. See BaseLearner::sRates for more info.
-	vector<sRates> bestmu(numClasses);
 
 	vector<float> tmpV(numClasses); // The class-wise votes/abstentions
 	vector<float> tmpThresholds(numClasses);
@@ -98,43 +85,32 @@ float MultiStumpLearner::run() {
 			sAlgo.findMultiThresholdsWithInit(dataBegin, dataEnd,
 					_pTrainingData, tmpThresholds, &mu, &tmpV);
 
-			for ( vector<sRates>::iterator itR = mu.begin(); itR != mu.end(); ++itR )
-			{
-				float tmpEdgePerClass = ( itR->rPls - itR->rMin );
-				// in each iteration the edge will be maximized, here this is done class-wisely.
-				if ( classwiseEdge[itR->classIdx] < tmpEdgePerClass )
-				{
-					//cout << "tmp1" << endl;
-					bestmu[itR->classIdx] = *itR;
-					_v[itR->classIdx] = tmpV[itR->classIdx];
-					//cout << "tmp2" << endl;
-					classwiseEdge[itR->classIdx] = tmpEdgePerClass;
-					_selectedColumnArray[itR->classIdx] = j;
-					_thresholds[itR->classIdx] = tmpThresholds[itR->classIdx];
-					//cout << "tmp3" << endl;
-				}
+			tmpEnergy = getEnergy(mu, tmpAlpha, tmpV);
+			if (tmpEnergy < bestEnergy && tmpAlpha > 0) {
+				// Store it in the current algorithm
+				// note: I don't really like having so many temp variables
+				// but the alternative would be a structure, which would need
+				// to be inheritable to make things more consistent. But this would
+				// make it less flexible. Therefore, I am still undecided. This
+				// might change!
 
+				_alpha = tmpAlpha;
+				_v = tmpV;
+				_selectedColumn = j;
+				_thresholds = tmpThresholds;
+
+				bestEnergy = tmpEnergy;
 			}
 		}
 	}
 
-	//cout << "tmpEnd" << endl;
-	bestEnergy = getEnergy(bestmu, _alpha, _v);
-
 	return bestEnergy;
 
 }
-// -----------------------------------------------------------------------
-
-float MultiStumpLearner::phi(InputData* pData, int idx, int classIdx) const
-{
-   return phi( pData->getValue(idx, _selectedColumnArray[classIdx]), classIdx );
-}
-
 
 // ------------------------------------------------------------------------------
 
-float MultiStumpLearner::phi(float val, int classIdx) const {
+float MultiThresholdStumpLearner::phi(float val, int classIdx) const {
 	if (val > _thresholds[classIdx])
 		return +1;
 	else
@@ -143,31 +119,21 @@ float MultiStumpLearner::phi(float val, int classIdx) const {
 
 // -----------------------------------------------------------------------
 
-void MultiStumpLearner::save(ofstream& outputStream, int numTabs) {
+void MultiThresholdStumpLearner::save(ofstream& outputStream, int numTabs) {
 	// Calling the super-class method
 	FeaturewiseLearner::save(outputStream, numTabs);
-
-	// save all the column indices
-	outputStream << Serialization::vectorTag("colArray", _selectedColumnArray,
-			_pTrainingData->getClassMap(), "class", (int) 0, numTabs)
-			<< endl;
 
 	// save all the thresholds
 	outputStream << Serialization::vectorTag("thArray", _thresholds,
 			_pTrainingData->getClassMap(), "class", (float) 0.0, numTabs)
 			<< endl;
-
 }
 
 // -----------------------------------------------------------------------
 
-void MultiStumpLearner::load(nor_utils::StreamTokenizer& st) {
+void MultiThresholdStumpLearner::load(nor_utils::StreamTokenizer& st) {
 	// Calling the super-class method
 	FeaturewiseLearner::load(st);
-
-	// load array of selected column data
-	UnSerialization::seekAndParseVectorTag(st, "colArray",
-			_pTrainingData->getClassMap(), "class", _selectedColumnArray);
 
 	// load vArray data
 	UnSerialization::seekAndParseVectorTag(st, "thArray",
@@ -176,14 +142,13 @@ void MultiStumpLearner::load(nor_utils::StreamTokenizer& st) {
 
 // -----------------------------------------------------------------------
 
-void MultiStumpLearner::subCopyState(BaseLearner *pBaseLearner) {
+void MultiThresholdStumpLearner::subCopyState(BaseLearner *pBaseLearner) {
 	FeaturewiseLearner::subCopyState(pBaseLearner);
 
-	MultiStumpLearner* pMultiStumpLearner =
-			dynamic_cast<MultiStumpLearner*> (pBaseLearner);
+	MultiThresholdStumpLearner* pMultiThresholdStumpLearner =
+			dynamic_cast<MultiThresholdStumpLearner*> (pBaseLearner);
 
-	pMultiStumpLearner->_thresholds = _thresholds;
-	pMultiStumpLearner->_selectedColumnArray = _selectedColumnArray;
+	pMultiThresholdStumpLearner->_thresholds = _thresholds;
 }
 
 // -----------------------------------------------------------------------

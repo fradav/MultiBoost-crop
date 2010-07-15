@@ -170,7 +170,7 @@ namespace MultiBoost {
 			//update the weights in the UCT tree
 
 			float edge = 0.0;
-			for( vector<sRates>::iterator itR = mu.begin(); itR != mu.end(); itR++ ) edge += ( itR->rPls - itR->rMin ); 
+			for ( vector<sRates>::iterator itR = mu.begin(); itR != mu.end(); itR++ ) edge += ( itR->rPls - itR->rMin );
 			double reward = this->getRewardFromEdge( edge );
 			_rewards[i] = reward;
 
