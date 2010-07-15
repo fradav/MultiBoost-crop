@@ -56,11 +56,11 @@ float MultiStumpLearner::run() {
 
 	// for storing the class-wise maximal edge
 	vector<float> classwiseEdge(numClasses);
-	fill(classwiseEdge.begin(), classwiseEdge.end(), -numeric_limits<float>::max() );
+	fill(classwiseEdge.begin(), classwiseEdge.end(), -1.0 );
 
 	//
 	_v.resize(numClasses);
-	_thresholds.reserve(numClasses);
+	_thresholds.resize(numClasses);
 
 	// set the smoothing value to avoid numerical problem
 	// when theta=0.
@@ -89,8 +89,7 @@ float MultiStumpLearner::run() {
 			--numOfDimensions;
 			const pair<vpIterator, vpIterator>
 					dataBeginEnd =
-							static_cast<SortedData*> (_pTrainingData)->getFileteredBeginEnd(
-									j);
+							static_cast<SortedData*> (_pTrainingData)->getFileteredBeginEnd(j);
 
 			const vpIterator dataBegin = dataBeginEnd.first;
 			const vpIterator dataEnd = dataBeginEnd.second;
@@ -101,24 +100,23 @@ float MultiStumpLearner::run() {
 			for ( vector<sRates>::iterator itR = mu.begin(); itR != mu.end(); ++itR )
 			{
 				float tmpEdgePerClass = ( itR->rPls - itR->rMin );
+
 				// in each iteration the edge will be maximized, here this is done class-wisely.
 				if ( classwiseEdge[itR->classIdx] < tmpEdgePerClass )
 				{
-					//cout << "tmp1" << endl;
-					bestmu[itR->classIdx] = *itR;
-					_v[itR->classIdx] = tmpV[itR->classIdx];
-					//cout << "tmp2" << endl;
 					classwiseEdge[itR->classIdx] = tmpEdgePerClass;
+					bestmu[itR->classIdx] = *itR;
+
+					_v[itR->classIdx] = tmpV[itR->classIdx];
 					_selectedColumnArray[itR->classIdx] = j;
 					_thresholds[itR->classIdx] = tmpThresholds[itR->classIdx];
-					//cout << "tmp3" << endl;
+					//cout << tmpThresholds[itR->classIdx] << endl;
 				}
 
 			}
 		}
 	}
 
-	//cout << "tmpEnd" << endl;
 	bestEnergy = getEnergy(bestmu, _alpha, _v);
 
 	return bestEnergy;
@@ -156,7 +154,6 @@ void MultiStumpLearner::save(ofstream& outputStream, int numTabs) {
 	outputStream << Serialization::vectorTag("thArray", _thresholds,
 			_pTrainingData->getClassMap(), "class", (float) 0.0, numTabs)
 			<< endl;
-
 }
 
 // -----------------------------------------------------------------------
