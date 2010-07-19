@@ -143,7 +143,7 @@ float MultiStumpLearner::phi(float val, int classIdx) const {
 
 void MultiStumpLearner::save(ofstream& outputStream, int numTabs) {
 	// Calling the super-class method
-	FeaturewiseLearner::save(outputStream, numTabs);
+	AbstainableLearner::save(outputStream, numTabs);
 
 	// save all the column indices
 	outputStream << Serialization::vectorTag("colArray", _selectedColumnArray,
@@ -160,7 +160,7 @@ void MultiStumpLearner::save(ofstream& outputStream, int numTabs) {
 
 void MultiStumpLearner::load(nor_utils::StreamTokenizer& st) {
 	// Calling the super-class method
-	FeaturewiseLearner::load(st);
+	AbstainableLearner::load(st);
 
 	// load array of selected column data
 	UnSerialization::seekAndParseVectorTag(st, "colArray",
@@ -174,7 +174,7 @@ void MultiStumpLearner::load(nor_utils::StreamTokenizer& st) {
 // -----------------------------------------------------------------------
 
 void MultiStumpLearner::subCopyState(BaseLearner *pBaseLearner) {
-	FeaturewiseLearner::subCopyState(pBaseLearner);
+	AbstainableLearner::subCopyState(pBaseLearner);
 
 	MultiStumpLearner* pMultiStumpLearner =
 			dynamic_cast<MultiStumpLearner*> (pBaseLearner);

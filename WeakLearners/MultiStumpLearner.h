@@ -59,7 +59,7 @@ namespace MultiBoost {
  * A \b multi threshold decision stump learner.
  * There is a threshold for every class.
  */
-class MultiStumpLearner: public FeaturewiseLearner {
+class MultiStumpLearner: public AbstainableLearner {
 public:
 
 	/**
@@ -68,7 +68,7 @@ public:
 	 */
 
 	MultiStumpLearner() :
-		FeaturewiseLearner(), _selectedColumnArray(0) {
+		AbstainableLearner(), _selectedColumnArray(0) {
 	}
 
 	/**
@@ -171,6 +171,7 @@ protected:
 
 	vector<int> _selectedColumnArray; // The selected columns having the smallest error for each class separately
 	vector<float> _thresholds; //!< The thresholds (one for each class) of the decision stump.
+	int    _maxNumOfDimensions; //!< limit on the number of searched dimensions in run()
 };
 
 //////////////////////////////////////////////////////////////////////////
