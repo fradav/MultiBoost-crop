@@ -71,7 +71,7 @@ namespace MultiBoost {
 		BA_UCT_LS
 	};
 
-	class BanditLearner : public BaseLearner
+	class BanditLearner : public virtual BaseLearner
 	{
 	protected:
 		typedef Exp3LS<double,string> Exp3LSDoubleString;

@@ -209,6 +209,7 @@ namespace MultiBoost {
 			if (pTestData)
 				pOutInfo->initialize(pTestData);
 		}
+		//cout << "Before serialization" << endl;
 		// reload the previously found weak learners if -resume is set. 
 		// otherwise just return 0
 		int startingIteration = resumeWeakLearners(pTrainingData);

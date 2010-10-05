@@ -58,8 +58,8 @@ using namespace std;
 namespace MultiBoost {
 
 /**
-* A \b single threshold decision stump learner. 
-* There is ONE and ONE ONLY threshold here.
+* A \b double thresholds decision stump learner. 
+* There are TWO thresholds here, becasue between the thresholds it returns with 0.
 */
 class SingleSparseStump : public FeaturewiseLearner
 {
@@ -180,7 +180,7 @@ protected:
    */
    virtual float phi(float val, int /*classIdx*/) const;
 
-   vector<float> _threshold; //!< the single threshold of the decision stump
+   vector<float> _threshold; //!< for both thresholds of the decision stump, agnostic case
 };
 
 //////////////////////////////////////////////////////////////////////////

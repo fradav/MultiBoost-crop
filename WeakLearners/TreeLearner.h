@@ -42,6 +42,8 @@
 #define __TREE_LEARNER_H
 
 #include "WeakLearners/BaseLearner.h"
+#include "WeakLearners/ScalarLearner.h"
+
 #include "Utils/Args.h"
 #include "IO/InputData.h"
 
@@ -77,10 +79,10 @@ struct greater_first : std::binary_function<T,T,bool>
 };
 
 struct NodePoint {
-	BaseLearner* _learner;
+	ScalarLearner* _learner;
 
-	BaseLearner* _rightChild;
-	BaseLearner* _leftChild;
+	ScalarLearner* _rightChild;
+	ScalarLearner* _leftChild;
 	
 	set< int >   _rightChildIdxSet;
 	set< int >   _leftChildIdxSet;
@@ -103,7 +105,7 @@ typedef pair< float, NodePoint > floatInnerNode;
 /**
 * A learner that loads a set of base learners, and boosts on the top of them. 
 */
-class TreeLearner : public BaseLearner
+class TreeLearner : public virtual BaseLearner
 {
 public:
 
@@ -219,7 +221,7 @@ protected:
 
 
 
-   vector<BaseLearner*> _baseLearners; //!< the learners of the product
+   vector<ScalarLearner*> _baseLearners; //!< the learners of the product
    /*
    If the _baseLearners[i] is classified as 1 then _idxPairs[i].first is the next classifier to be used, otherwise _idxPairs[i].second 
    */

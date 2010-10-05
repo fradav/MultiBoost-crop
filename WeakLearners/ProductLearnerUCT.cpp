@@ -197,7 +197,7 @@ namespace MultiBoost {
 				}
 			}
 			pPreviousBaseLearner = _baseLearners[ib]->copyState();
-			energy = ((FeaturewiseLearner*)_baseLearners[ib])->run( trajectory[ib] );
+			energy = dynamic_cast<FeaturewiseLearner*>(_baseLearners[ib])->run( trajectory[ib] );
 			_alpha = _baseLearners[ib]->getAlpha();
 			if (_verbose > 2) {
 				cout << "E[" << (ib+1) <<  "] = " << energy << endl << flush;

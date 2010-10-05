@@ -41,6 +41,8 @@
 #define __CONSTANT_LEARNER_H
 
 #include "WeakLearners/AbstainableLearner.h"
+#include "WeakLearners/ScalarLearner.h"
+
 #include "Utils/Args.h"
 #include "IO/InputData.h"
 
@@ -59,7 +61,7 @@ namespace MultiBoost {
 * A \b single threshold decision stump learner. 
 * There is ONE and ONE ONLY threshold here.
 */
-class ConstantLearner : public AbstainableLearner
+class ConstantLearner : public virtual AbstainableLearner, public virtual ScalarLearner
 {
 public:
 
@@ -120,6 +122,8 @@ protected:
    * \see classify
    */
    virtual float phi(InputData* pData, int idx, int classIdx) const { return 1; }
+
+   virtual float cut(  InputData* pData, int idx ) const { return 1; }
 };
 
 //////////////////////////////////////////////////////////////////////////

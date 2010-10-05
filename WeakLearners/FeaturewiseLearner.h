@@ -62,7 +62,7 @@ namespace MultiBoost {
 *
 * \date 19/07/2006
 */
-class FeaturewiseLearner : public AbstainableLearner
+class FeaturewiseLearner : public virtual AbstainableLearner
 {
 public:
 

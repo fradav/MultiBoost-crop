@@ -161,7 +161,7 @@ namespace MultiBoost {
 				}
 			}
 			pPreviousBaseLearner = _baseLearners[ib]->copyState();
-			energy = static_cast< FeaturewiseLearner* >(_baseLearners[ib])->run( _armsForPulling );
+			energy = dynamic_cast< FeaturewiseLearner* >(_baseLearners[ib])->run(_armsForPulling );
 			// check if it is signailing_nan
 			if ( energy != energy )
 			{

@@ -40,7 +40,7 @@
 #ifndef __SINGLE_STUMP_LEARNER_H
 #define __SINGLE_STUMP_LEARNER_H
 
-//#include "WeakLearners/ClasswiseLearner.h"
+#include "WeakLearners/ScalarLearner.h"
 #include "WeakLearners/FeaturewiseLearner.h"
 #include "Utils/Args.h"
 #include "IO/InputData.h"
@@ -61,7 +61,7 @@ namespace MultiBoost {
 * A \b single threshold decision stump learner. 
 * There is ONE and ONE ONLY threshold here.
 */
-class SingleStumpLearner : public FeaturewiseLearner
+class SingleStumpLearner : public virtual FeaturewiseLearner, public virtual ScalarLearner
 {
 public:
 
@@ -182,7 +182,19 @@ protected:
    * \date 11/11/2005
    * \see classify
    */
-   virtual float phi(float val, int /*classIdx*/) const;
+
+
+   virtual float phi(float val ) const;
+
+   virtual float phi(float val, int classIdx) const { return phi(val); }
+
+
+  virtual float cut( InputData* pData, int idx ) const
+  {
+   return phi( pData->getValue( idx, _selectedColumn) );
+  }
+
+
 
    float _threshold; //!< the single threshold of the decision stump
 };

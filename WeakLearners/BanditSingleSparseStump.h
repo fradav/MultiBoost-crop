@@ -87,7 +87,7 @@ public:
    */
    virtual BaseLearner* subCreate() { 
 	   BaseLearner* retLearner = new BanditSingleSparseStump();
-	   static_cast< BanditSingleStumpLearner* >(retLearner)->setBanditAlgoObject( _banditAlgo );
+	   dynamic_cast< BanditSingleStumpLearner* >(retLearner)->setBanditAlgoObject( _banditAlgo );
 	   return retLearner;
    }
 

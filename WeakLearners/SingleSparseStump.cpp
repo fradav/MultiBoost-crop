@@ -155,11 +155,11 @@ float SingleSparseStump::run()
 float SingleSparseStump::phi(float val, int /*classIdx*/) const
 {
    if ( val < _threshold[1] )
-	   return +1;
-   //else if ( val > _threshold[1] )
-   else
 	   return -1;
-   //else return 0;
+   else if ( val > _threshold[2] )
+	   return 1;
+   else
+	   return 0;
 }
 
 // ------------------------------------------------------------------------------

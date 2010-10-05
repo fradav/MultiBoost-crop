@@ -181,7 +181,7 @@ namespace MultiBoost {
 		//train the first learner
 		//_baseLearners[0]->run();
 		pPreviousBaseLearner = _baseLearners[0]->copyState();
-		((FeaturewiseLearner*)pPreviousBaseLearner)->run( trajectory[0] );
+		dynamic_cast<FeaturewiseLearner*>(pPreviousBaseLearner)->run( trajectory[0] );
 
 		//this contains the number of baselearners 
 		int ib = 0;
@@ -510,7 +510,7 @@ void TreeLearnerUCT::calculateChildrenAndEnergies( NodePoint& bLearner, int dept
 		BaseLearner* posLearner = _baseLearners[0]->copyState();
 
 		//posLearner->run();
-		((FeaturewiseLearner*)posLearner)->run( depthIndex ); 
+		dynamic_cast<FeaturewiseLearner*>(posLearner)->run( depthIndex );
 		//
 		//float posEdge = getEdge( posLearner, _pTrainingData );
 		posLearner->setTrainingData( _pTrainingData );
@@ -532,7 +532,7 @@ void TreeLearnerUCT::calculateChildrenAndEnergies( NodePoint& bLearner, int dept
 		BaseLearner* posLearner = pConstantWeakHypothesisSource->create();
 		posLearner->setTrainingData(_pTrainingData);
 		//float constantEnergy = posLearner->run();
-		((FeaturewiseLearner*)posLearner)->run( depthIndex ); 
+		dynamic_cast<FeaturewiseLearner*>(posLearner)->run( depthIndex );
 
 		//BaseLearner* posLearner = _baseLearners[0]->copyState();
 		//float posEdge = getEdge( posLearner, _pTrainingData );
@@ -559,7 +559,7 @@ void TreeLearnerUCT::calculateChildrenAndEnergies( NodePoint& bLearner, int dept
 
 		
 		//negLearner->run();
-		((FeaturewiseLearner*)negLearner)->run( depthIndex ); 
+		dynamic_cast<FeaturewiseLearner*>(negLearner)->run( depthIndex );
 		//float negEdge = getEdge( negLearner, _pTrainingData );
 
 		negLearner->setTrainingData( _pTrainingData );
@@ -580,7 +580,7 @@ void TreeLearnerUCT::calculateChildrenAndEnergies( NodePoint& bLearner, int dept
 		BaseLearner* negLearner =  pConstantWeakHypothesisSource->create();
 		negLearner->setTrainingData(_pTrainingData);
 		//float constantEnergy = negLearner->run();
-		((FeaturewiseLearner*)negLearner)->run( depthIndex ); 
+		dynamic_cast<FeaturewiseLearner*>(negLearner)->run( depthIndex );
 
 		//tmpPair.first = getEdge( negLearner, _pTrainingData );;
 		bLearner._rightChild = negLearner;

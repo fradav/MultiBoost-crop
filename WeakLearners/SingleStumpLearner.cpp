@@ -288,7 +288,7 @@ namespace MultiBoost {
 
 	// ------------------------------------------------------------------------------
 
-	float SingleStumpLearner::phi(float val, int /*classIdx*/) const
+	float SingleStumpLearner::phi(float val ) const
 	{
 		if (val > _threshold)
 			return +1;

@@ -144,6 +144,7 @@ void HaarLearner::subCopyState(HaarLearner *pHaarLearner)
    pHaarLearner->_selectedConfig.width = _selectedConfig.width;
    pHaarLearner->_selectedConfig.height = _selectedConfig.height;
    pHaarLearner->_samplingType = _samplingType;
+   pHaarLearner->_samplingVal = _samplingVal;
 }
 
 // ------------------------------------------------------------------------------

@@ -109,7 +109,7 @@ public:
    */
    virtual BaseLearner* subCreate() { 
 		BaseLearner* retLearner = new BanditProductLearner();
-		static_cast< BanditProductLearner* >(retLearner)->setBanditAlgoObject( static_cast< BanditProductLearner* >(this)->getBanditAlgoObject() );
+		dynamic_cast< BanditProductLearner* >(retLearner)->setBanditAlgoObject( static_cast< BanditProductLearner* >(this)->getBanditAlgoObject() );
 		return retLearner;  
    }
 

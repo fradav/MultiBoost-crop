@@ -67,7 +67,7 @@ namespace MultiBoost {
 *
 * \date 19/09/06
 */
-class AbstainableLearner : public BaseLearner
+class AbstainableLearner : public virtual BaseLearner
 {
 public:
    vector<float> _v;

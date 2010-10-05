@@ -75,11 +75,22 @@ namespace MultiBoost {
 		// get the registered weak learner (type from name)
 		BaseLearner* pWeakHypothesisSource = 
 			BaseLearner::RegisteredLearners().getLearner(baseLearnerName);
+		
+		//check whether the weak learner is a ScalarLeaerner
+		try {
+			ScalarLearner* pScalaWeakHypothesisSource = dynamic_cast<ScalarLearner*>(pWeakHypothesisSource);
+		}
+		catch (bad_cast e) {
+			cerr << "The weak hypothesis must be a ScalarLearner!!!" << endl;
+			exit(-1);
+		}
+		
+		
 		pWeakHypothesisSource->initLearningOptions(args);
 		
 		for( int ib = 0; ib < _numBaseLearners; ++ib ) {
-			_baseLearners.push_back(pWeakHypothesisSource->create());
-			_baseLearners[ib]->initLearningOptions(args);
+			_baseLearners.push_back(dynamic_cast<ScalarLearner*>(pWeakHypothesisSource->create()));
+			dynamic_cast<BaseLearner*>(_baseLearners[ib])->initLearningOptions(args);
 
 			vector< int > tmpVector( 2, -1 );
 			_idxPairs.push_back( tmpVector );
@@ -93,7 +104,7 @@ namespace MultiBoost {
 		float result  = 1;
 		int ib = 0;
 		while ( 1 ) {
-			float phix = _baseLearners[ib]->classify(pData,idx,0);
+			float phix = _baseLearners[ib]->cut(pData,idx);
 			if ( phix > 0 ) {
 				if ( _idxPairs[ ib ][ 0 ] > 0 ) { 
 					ib = _idxPairs[ ib ][ 0 ];
@@ -119,7 +130,7 @@ namespace MultiBoost {
 
 		float edge = numeric_limits<float>::max();
 
-		BaseLearner* pPreviousBaseLearner = 0;
+		ScalarLearner* pPreviousBaseLearner = 0;
 		set< int > tmpIdx, idxPos, idxNeg, origIdx;
 		//floatBaseLearner tmpPair, tmpPairPos, tmpPairNeg;
 
@@ -130,7 +141,7 @@ namespace MultiBoost {
 
 		//train the first learner
 		//_baseLearners[0]->run();
-		pPreviousBaseLearner = _baseLearners[0]->copyState();
+		pPreviousBaseLearner = dynamic_cast<ScalarLearner*>(_baseLearners[0]->copyState());
 		pPreviousBaseLearner->run();
 		
 		//_pTrainingData->clearIndexSet();
@@ -400,7 +411,7 @@ void TreeLearner::calculateChildrenAndEnergies( NodePoint& bLearner ) {
 
 	for (int i = 0; i < _pTrainingData->getNumExamples(); ++i) {
 		// this returns the phi value of classifier
-		phix = bLearner._learner->classify(_pTrainingData,i,0);
+		phix = bLearner._learner->cut(_pTrainingData,i);
 		if ( phix <  0 )
 			idxNeg.insert( _pTrainingData->getRawIndex( i ) );
 		else if ( phix > 0 ) { // have to redo the multiplications, haven't been tested
@@ -416,7 +427,7 @@ void TreeLearner::calculateChildrenAndEnergies( NodePoint& bLearner ) {
 	energy = numeric_limits<float>::signaling_NaN();	
 
 	if ( ! _pTrainingData->isSamplesFromOneClass() ) {
-		BaseLearner* posLearner = _baseLearners[0]->copyState();
+		ScalarLearner* posLearner = dynamic_cast<ScalarLearner*>(_baseLearners[0]->copyState());
 
 		energy = posLearner->run();
 		if ( energy == energy ) {
@@ -430,7 +441,7 @@ void TreeLearner::calculateChildrenAndEnergies( NodePoint& bLearner ) {
 	}
 
 	if ( energy != energy ) { //we don't find column, this case can occur when we have sparse data
-		BaseLearner* pConstantWeakHypothesisSource = 
+		BaseLearner* pConstantWeakHypothesisSource =
 			BaseLearner::RegisteredLearners().getLearner("ConstantLearner");
 
 		BaseLearner* posLearner = pConstantWeakHypothesisSource->create();
@@ -438,7 +449,7 @@ void TreeLearner::calculateChildrenAndEnergies( NodePoint& bLearner ) {
 		float constantEnergy = posLearner->run();
 
 		bLearner._leftEdge = posLearner->getEdge( false );
-		bLearner._leftChild = posLearner;
+		bLearner._leftChild = dynamic_cast<ScalarLearner*>(posLearner);
 		bLearner._leftChildIdxSet = idxPos;
 	}
 
@@ -453,7 +464,7 @@ void TreeLearner::calculateChildrenAndEnergies( NodePoint& bLearner ) {
 		if ( energy == energy ) 
 		{
 			bLearner._rightEdge = negLearner->getEdge( false );
-			bLearner._rightChild = negLearner;
+			bLearner._rightChild = dynamic_cast<ScalarLearner*>(negLearner);
 			bLearner._rightChildIdxSet = idxNeg;
 		} else {
 			delete negLearner;
@@ -462,7 +473,7 @@ void TreeLearner::calculateChildrenAndEnergies( NodePoint& bLearner ) {
 
 	if ( energy != energy ) 
 	{
-		BaseLearner* pConstantWeakHypothesisSource = 
+		BaseLearner* pConstantWeakHypothesisSource =
 			BaseLearner::RegisteredLearners().getLearner("ConstantLearner");
 
 		BaseLearner* negLearner =  pConstantWeakHypothesisSource->create();
@@ -470,7 +481,7 @@ void TreeLearner::calculateChildrenAndEnergies( NodePoint& bLearner ) {
 		float constantEnergy = negLearner->run();
 
 		bLearner._rightEdge = negLearner->getEdge( false );
-		bLearner._rightChild = negLearner;
+		bLearner._rightChild = dynamic_cast<ScalarLearner*>(negLearner);
 		
 		bLearner._rightChildIdxSet = idxNeg;
 	}
@@ -494,6 +505,7 @@ void TreeLearner::save(ofstream& outputStream, int numTabs)
 	}
 
 	for( int ib = 0; ib < _numBaseLearners; ++ib ) {
+		//dynamic_cast<BaseLearner*>(_baseLearners[ib])->save(outputStream, numTabs + 1);
 		_baseLearners[ib]->save(outputStream, numTabs + 1);
 	}
 }
@@ -518,7 +530,8 @@ void TreeLearner::load(nor_utils::StreamTokenizer& st)
 
 
 	for(int ib = 0; ib < _numBaseLearners; ++ib) {
-		UnSerialization::loadHypothesis(st, _baseLearners, _pTrainingData, _verbose);
+		UnSerialization::loadHypothesis(st, reinterpret_cast<vector<BaseLearner* >& >(_baseLearners), _pTrainingData, _verbose);
+		_baseLearners[ib]->cut(_pTrainingData,10);
 	}
 
 }
@@ -536,7 +549,7 @@ void TreeLearner::subCopyState(BaseLearner *pBaseLearner)
 
 	// deep copy
 	for(int ib = 0; ib < _numBaseLearners; ++ib)
-		pTreeLearner->_baseLearners.push_back(_baseLearners[ib]->copyState());
+		pTreeLearner->_baseLearners.push_back(dynamic_cast<ScalarLearner*>(_baseLearners[ib]->copyState()));
 }
 
 // -----------------------------------------------------------------------

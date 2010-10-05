@@ -59,7 +59,7 @@ namespace MultiBoost {
 
 /**
 * A \b single threshold decision stump learner. 
-* There is ONE and ONE ONLY threshold here.
+* There is ONE and ONE ONLY threshold here. It works for sparse features.
 */
 class SingleSparseStumpLearner : public FeaturewiseLearner
 {

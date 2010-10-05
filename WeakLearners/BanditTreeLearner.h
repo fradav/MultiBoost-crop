@@ -62,7 +62,7 @@ namespace MultiBoost {
 	/**
 	* A learner that loads a set of base learners, and boosts on the top of them. 
 	*/
-	class BanditTreeLearner : public BanditLearner
+	class BanditTreeLearner : public virtual BanditLearner, public virtual TreeLearner
 	{
 	public:
 
@@ -71,7 +71,7 @@ namespace MultiBoost {
 		* The constructor. It initializes _numBaseLearners to -1
 		* \date 26/05/2007
 		*/
-		BanditTreeLearner() : BanditLearner(), _numBaseLearners(-1) { }
+		BanditTreeLearner() : BanditLearner(), TreeLearner() { }
 
 		/**
 		* The destructor. Must be declared (virtual) for the proper destruction of 
@@ -115,7 +115,7 @@ namespace MultiBoost {
 		virtual BaseLearner* subCreate() 
 		{ 
 			BaseLearner* retLearner = new BanditTreeLearner();
-			static_cast< BanditLearner* >(retLearner)->setBanditAlgoObject( static_cast< BanditLearner* >(this)->getBanditAlgoObject() );
+			dynamic_cast< BanditLearner* >(retLearner)->setBanditAlgoObject( static_cast< BanditLearner* >(this)->getBanditAlgoObject() );
 			return retLearner;  
 		}
 		
@@ -182,9 +182,6 @@ namespace MultiBoost {
 		//extend a point in the tree
 		void calculateChildrenAndEnergies( NodePoint& bLearner );
 
-		vector<BaseLearner*> _baseLearners; //!< the learners of the tree
-		vector< vector<int> > _idxPairs; // structure of the tree
-		int _numBaseLearners;   
 	};
 
 
