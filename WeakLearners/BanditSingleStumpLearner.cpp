@@ -67,9 +67,9 @@ namespace MultiBoost {
 	//int BanditSingleStumpLearner::_K = 0; // number of columns to be selected
 
 	void BanditSingleStumpLearner::declareArguments(nor_utils::Args& args)
-	{
-		BaseLearner::declareArguments(args);
-
+	{		
+		FeaturewiseLearner::declareArguments(args);
+		
 		args.declareArgument("updaterule", 
 			"The update weights in the UCT can be the 1-sqrt( 1- edge^2 ) [edge]\n"
 			"  or the alpha [alphas]\n"
@@ -97,7 +97,7 @@ namespace MultiBoost {
 
 	void BanditSingleStumpLearner::initLearningOptions(const nor_utils::Args& args)
 	{
-		BaseLearner::initLearningOptions(args);
+		FeaturewiseLearner::initLearningOptions(args);
 
 		string updateRule = "";
 		if ( args.hasArgument( "updaterule" ) )
@@ -432,23 +432,6 @@ namespace MultiBoost {
 		_pTrainingData->loadIndexSet( oldIndexSet );
 	}
 
-	// ------------------------------------------------------------------------------
-
-	float BanditSingleStumpLearner::phi(float val, int /*classIdx*/) const
-	{
-		if (val > _threshold)
-			return +1;
-		else
-			return -1;
-	}
-
-	// ------------------------------------------------------------------------------
-
-	float BanditSingleStumpLearner::phi(InputData* pData,int pointIdx) const
-	{
-		return phi(pData->getValue(pointIdx,_selectedColumn),0);
-	}
-
 	// -----------------------------------------------------------------------
 
 	void BanditSingleStumpLearner::save(ofstream& outputStream, int numTabs)
@@ -523,25 +506,6 @@ namespace MultiBoost {
 		pBanditSingleStumpLearner->_updateRule = _updateRule;
 		pBanditSingleStumpLearner->_percentage = _percentage;
 	}
-
-	// -----------------------------------------------------------------------
-
-	//void BanditSingleStumpLearner::getStateData( vector<float>& data, const string& /*reason*/, InputData* pData )
-	//{
-	//   const int numClasses = pData->getNumClasses();
-	//   const int numExamples = pData->getNumExamples();
-	//
-	//   // reason ignored for the moment as it is used for a single task
-	//   data.resize( numClasses + numExamples );
-	//
-	//   int pos = 0;
-	//
-	//   for (int l = 0; l < numClasses; ++l)
-	//      data[pos++] = _v[l];
-	//
-	//   for (int i = 0; i < numExamples; ++i)
-	//      data[pos++] = BanditSingleStumpLearner::phi( pData->getValue( i, _selectedColumn), 0 );
-	//}
 
 	// -----------------------------------------------------------------------
 

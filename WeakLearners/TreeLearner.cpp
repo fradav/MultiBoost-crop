@@ -42,6 +42,7 @@
 #include <cmath>
 #include <limits>
 #include <queue>
+#include <typeinfo>
 
 namespace MultiBoost {
 
@@ -80,7 +81,7 @@ namespace MultiBoost {
 		try {
 			ScalarLearner* pScalaWeakHypothesisSource = dynamic_cast<ScalarLearner*>(pWeakHypothesisSource);
 		}
-		catch (bad_cast e) {
+		catch (bad_cast& e) {
 			cerr << "The weak hypothesis must be a ScalarLearner!!!" << endl;
 			exit(-1);
 		}
@@ -527,11 +528,18 @@ void TreeLearner::load(nor_utils::StreamTokenizer& st)
 		p[1] = rightChild;
 		_idxPairs.push_back( p );
 	}
-
-
+	
+	// kind of creepy solution. the vector of BaseLearner* cannot be casted to a vector of ScalarLearner*,
+	// thus we shuold do this for each array element, separately.
 	for(int ib = 0; ib < _numBaseLearners; ++ib) {
-		UnSerialization::loadHypothesis(st, reinterpret_cast<vector<BaseLearner* >& >(_baseLearners), _pTrainingData, _verbose);
-		_baseLearners[ib]->cut(_pTrainingData,10);
+		vector<BaseLearner*> baseLearners(0);
+		UnSerialization::loadHypothesis(st, baseLearners, _pTrainingData, _verbose);
+		
+		if (baseLearners.size()>0)
+		{
+			_baseLearners.push_back( dynamic_cast<ScalarLearner*>(baseLearners[0]) );
+			_baseLearners[ib]->cut(_pTrainingData,10);
+		}
 	}
 
 }

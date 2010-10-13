@@ -405,14 +405,18 @@ namespace MultiBoost {
 	void AdaBoostMHLearner::doPosteriors(const nor_utils::Args& args)
 	{
 		AdaBoostMHClassifier classifier(args, _verbose);
-
-		// -posteriors <dataFile> <shypFile> <outFileName>
+		int numofargs = args.getNumValues( "posteriors" );
+		// -posteriors <dataFile> <shypFile> <outFile> <numIters>
 		string testFileName = args.getValue<string>("posteriors", 0);
 		string shypFileName = args.getValue<string>("posteriors", 1);
 		string outFileName = args.getValue<string>("posteriors", 2);
 		int numIterations = args.getValue<int>("posteriors", 3);
-
-		classifier.savePosteriors(testFileName, shypFileName, outFileName, numIterations);
+		int period = 0;
+		
+		if ( numofargs == 5 )
+			period = args.getValue<int>("posteriors", 4);
+		
+		classifier.savePosteriors(testFileName, shypFileName, outFileName, numIterations, period);
 	}
 
 	// -------------------------------------------------------------------------

@@ -38,7 +38,8 @@
 #define __BANDIT_SINGLE_STUMP_LEARNER_H
 
 //#include "WeakLearners/ClasswiseLearner.h"
-#include "WeakLearners/FeaturewiseLearner.h"
+//#include "WeakLearners/FeaturewiseLearner.h"
+#include "WeakLearners/SingleStumpLearner.h"
 #include "Utils/Args.h"
 #include "IO/InputData.h"
 #include "IO/SortedData.h"
@@ -74,11 +75,11 @@ enum BanditAlgo
 * A \b single threshold decision stump learner. 
 * There is ONE and ONE ONLY threshold here.
 */
-class BanditSingleStumpLearner : public FeaturewiseLearner
+class BanditSingleStumpLearner : public SingleStumpLearner 
 {
 public:
 
-	BanditSingleStumpLearner() : FeaturewiseLearner(), _banditAlgo( NULL ) {}
+	BanditSingleStumpLearner() : SingleStumpLearner(), _banditAlgo( NULL ) {}
 
    /**
    * The destructor. Must be declared (virtual) for the proper destruction of 
@@ -103,16 +104,6 @@ public:
 	   return retLearner;
    }
 
-   /**
-   * Creates an InputData object that it is good for the
-   * weak learner. Overridden to return SortedData.
-   * \see InputData
-   * \see BaseLearner::createInputData()
-   * \see SortedData
-   * \warning The object \b must be destroyed by the caller.
-   * \date 21/11/2005
-   */
-   virtual InputData* createInputData() { return new SortedData(); }
 
    /**
 	* Declare weak-learner-specific arguments.
@@ -196,27 +187,6 @@ public:
    */
    //virtual void getStateData( vector<float>& data, const string& /*reason = ""*/, InputData* pData = 0 );
 
-   /**
-   * The same discriminative function as below, but called with a data point. 
-   * Called only from HierarchicalStumpLearner::phi
-   * \param pData The input data.
-   * \param pointIdx The index of the data point.
-   * \return +1 if \a pData[pointIdx][_selectedColumn] is on one side of the 
-   * border for \a classIdx and -1 otherwise.
-   * \date 17/02/2006
-   */
-   virtual float phi(InputData* pData, int pointIdx) const;
-
-   /**
-   * Sets _pTrainingData. Should be called before run()
-   * \param pTrainingData Pointer to the training data
-   * \date 19/04/2007
-   */
-	/*
-	virtual void setTrainingData(InputData *pTrainingData) {
-	   _pTrainingData = pTrainingData;
-	}
-	*/
 
 	 /**
 	   * Calculate the reward from the edge according to the update rule
@@ -237,20 +207,6 @@ protected:
    */
    void estimatePayoffs( vector<double>& payoffs );
 
-   /**
-   * A discriminative function. 
-   * \remarks Positive or negative do NOT refer to positive or negative classification.
-   * This function is equivalent to the phi function in my thesis.
-   * \param val The value to discriminate
-   * \param classIdx The class index, used by MultiStumpLearner when phi depends on the class
-   * \return +1 if \a val is on one side of the border for \a classIdx and -1 otherwise
-   * \date 11/11/2005
-   * \see classify
-   */
-   virtual float phi(float val, int /*classIdx*/) const;
-
-
-   float _threshold; //!< the single threshold of the decision stump
 
    // the notation is borrowed from the paper of Kocsis et. al. ECML
    //static vector< int > _T; // the number of a feature has been selected 

@@ -334,7 +334,7 @@ namespace MultiBoost {
 	// -------------------------------------------------------------------------
 
 	void AdaBoostMHClassifier::savePosteriors(const string& dataFileName, const string& shypFileName, 
-		const string& outFileName, int numIterations)
+		const string& outFileName, int numIterations, int period)
 	{
 		InputData* pData = loadInputData(dataFileName, shypFileName);
 
@@ -356,8 +356,11 @@ namespace MultiBoost {
 		if (_verbose > 0)
 			cout << "Classifying..." << flush;
 
+		if ( period == 0 )
+			period=numIterations;
+		
 		// get the results
-		computeResults( pData, weakHypotheses, results, numIterations );
+		computeResults( pData, weakHypotheses, results, period );
 
 		const int numClasses = pData->getNumClasses();
 		const int numExamples = pData->getNumExamples();
@@ -367,6 +370,9 @@ namespace MultiBoost {
 
 		if (_verbose > 0)
 			cout << "Output posteriors..." << flush;
+
+		if (period<numIterations)
+			outFile << period << endl;
 
 		for (int i = 0; i < numExamples; ++i)
 		{
@@ -383,6 +389,31 @@ namespace MultiBoost {
 			outFile << '\n';
 		}
 
+		
+		for (int p=period; p<numIterations; p+=period )
+		{
+			continueComputingResults(pData, weakHypotheses, results, p, p+period );
+			if ( _verbose > 0) {
+				cout << "Write out the posterios for iteration " << p << endl;
+			}
+			outFile << p+period << endl;
+			for (int i = 0; i < numExamples; ++i)
+			{
+				// output the name if it exists, otherwise the number
+				// of the example
+				exampleName = pData->getExampleName(i);
+				if ( !exampleName.empty() )
+					outFile << exampleName << ',';
+				
+				// output the posteriors
+				outFile << results[i]->getVotesVector()[0];
+				for (int l = 1; l < numClasses; ++l)
+					outFile << ',' << results[i]->getVotesVector()[l];
+				outFile << '\n';
+			}
+			
+		}
+		
 		if (_verbose > 0)
 			cout << "Done!" << endl;
 
@@ -1012,7 +1043,47 @@ namespace MultiBoost {
 			delete pOutInfo;
 
 	}
+	
+	// -------------------------------------------------------------------------
+	
+	// Continue returns the results into ptRes for savePosteriors
+	// must be called the computeResult first!!!
+	void AdaBoostMHClassifier::continueComputingResults(InputData* pData, vector<BaseLearner*>& weakHypotheses, 
+											  vector< ExampleResults* >& results, int fromIteration, int toIteration)
+	{
+		assert( !weakHypotheses.empty() );
+		
+		const int numClasses = pData->getNumClasses();
+		const int numExamples = pData->getNumExamples();
+		
+						
+		// iterator over all the weak hypotheses
+		vector<BaseLearner*>::const_iterator whyIt;
+		int t;
 
+		for (whyIt = weakHypotheses.begin(), t = 0; 
+			 whyIt != weakHypotheses.end() && t < fromIteration; ++whyIt, ++t) {}
+		
+		// for every feature: 1..T
+		for (;whyIt != weakHypotheses.end() && t < toIteration; ++whyIt, ++t)
+		{
+			BaseLearner* currWeakHyp = *whyIt;
+			float alpha = currWeakHyp->getAlpha();
+			
+			// for every point
+			for (int i = 0; i < numExamples; ++i)
+			{
+				// a reference for clarity and speed
+				vector<float>& currVotesVector = results[i]->getVotesVector();
+				
+				// for every class
+				for (int l = 0; l < numClasses; ++l)
+					currVotesVector[l] += alpha * currWeakHyp->classify(pData, i, l);
+			}			
+		}
+		
+	}
+	
 	// -------------------------------------------------------------------------
 
 	float AdaBoostMHClassifier::getOverallError( InputData* pData, const vector<ExampleResults*>& results, 
