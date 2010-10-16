@@ -392,6 +392,8 @@ namespace MultiBoost {
 		
 		for (int p=period; p<numIterations; p+=period )
 		{
+			if ( (p+period) > weakHypotheses.size() ) break;
+			
 			continueComputingResults(pData, weakHypotheses, results, p, p+period );
 			if ( _verbose > 0) {
 				cout << "Write out the posterios for iteration " << p << endl;

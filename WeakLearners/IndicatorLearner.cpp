@@ -395,7 +395,7 @@ namespace MultiBoost {
 
 	// ------------------------------------------------------------------------------
 
-	float IndicatorLearner::phi(float val, int /*classIdx*/) const
+	float IndicatorLearner::phi(float val) const
 	{
 		return _u[static_cast<int>(val)];
 	}
