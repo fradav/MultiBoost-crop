@@ -52,7 +52,7 @@ namespace MultiBoost {
 
 	// -----------------------------------------------------------------------------
 
-	const float BaseLearner::_smallVal = 1e-7;
+	const float BaseLearner::_smallVal = 1e-3;
 	int    BaseLearner::_verbose = 1;
 	float BaseLearner::_smoothingVal = BaseLearner::_smallVal;
 

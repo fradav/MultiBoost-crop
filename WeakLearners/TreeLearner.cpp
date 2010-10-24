@@ -112,13 +112,16 @@ namespace MultiBoost {
 				} else {
 					return _baseLearners[ib]->classify( pData, idx, classIdx ); 
 				}
-			} else {
+			} else if ( phix < 0 ) {
 				if ( _idxPairs[ ib ][ 1 ] > 0 ) { 
 					ib = _idxPairs[ ib ][ 1 ];
 				} else {
 					return _baseLearners[ib]->classify( pData, idx, classIdx ); 
 				}
+			} else {
+				return 0;
 			}
+
 		}
 	}
 
@@ -195,12 +198,6 @@ namespace MultiBoost {
 			delete tmpBL;				
 			ib = 1;
 		}
-
-
-
-
-
-
 
 		while ( ! pq.empty() && ( ib < _numBaseLearners ) ) {
 			//get the best learner from the priority queue

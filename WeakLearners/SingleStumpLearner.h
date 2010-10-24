@@ -182,13 +182,27 @@ namespace MultiBoost {
 		 * \date 11/11/2005
 		 * \see classify
 		 */
-		
-		
 		virtual float phi(float val ) const;
 		
+		/**
+		 * A discriminative function. 
+		 * \remarks Positive or negative do NOT refer to positive or negative classification.
+		 * This function is equivalent to the phi function in my thesis.
+		 * \param val The value to discriminate
+		 * \param classIdx The class index, used by MultiStumpLearner when phi depends on the class
+		 * \return +1 if \a val is on one side of the border for \a classIdx and -1 otherwise
+		 * \date 11/11/2005
+		 * \see classify
+		 */		
 		virtual float phi(float val, int classIdx) const { return phi(val); }
 		
-		
+		/**
+		 * A simple cut on a feature. This simple function is needed for TreeLearner.
+		 * \param pData The input data.
+		 * \param idx The index of the data point.
+		 * \return +1 if \a val is on one side of the border for \a classIdx and -1 otherwise
+		 * \date 11/11/2005
+		 */		
 		virtual float cut( InputData* pData, int idx ) const
 		{
 			return phi( pData->getValue( idx, _selectedColumn) );
