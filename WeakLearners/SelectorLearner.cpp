@@ -166,9 +166,13 @@ namespace MultiBoost {
 		}
 		
 		
-		_id = _pTrainingData->getAttributeNameMap().getNameFromIdx(_selectedColumn);
-		return bestEnergy;
-		
+		if (_selectedColumn>-1)
+		{
+			_id = _pTrainingData->getAttributeNameMap().getNameFromIdx(_selectedColumn);
+			return bestEnergy;
+		} else {
+			return bestEnergy = numeric_limits<float>::signaling_NaN();
+		}				
 	}
 	
 	// ------------------------------------------------------------------------------

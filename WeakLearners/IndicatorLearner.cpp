@@ -50,7 +50,7 @@ namespace MultiBoost {
 		const int numClasses = _pTrainingData->getNumClasses();
 		const int numColumns = _pTrainingData->getNumAttributes();
 		const int numExamples = _pTrainingData->getNumExamples();
-
+		
 		// set the smoothing value to avoid numerical problem
 		// when theta=0.
 		setSmoothingVal( 1.0 / (float)_pTrainingData->getNumExamples() * 0.01 );
@@ -215,9 +215,14 @@ namespace MultiBoost {
 			}
 		}
 
+		if (_selectedColumn>-1)
+		{
+			_id = _pTrainingData->getAttributeNameMap().getNameFromIdx(_selectedColumn);
+			return bestEnergy;
+		} else {
+			return bestEnergy = numeric_limits<float>::signaling_NaN();
+		}
 
-		_id = _pTrainingData->getAttributeNameMap().getNameFromIdx(_selectedColumn);
-		return bestEnergy;
 
 	}
 

@@ -239,19 +239,22 @@ namespace MultiBoost {
 			BaseLearner* pWeakHypothesis = pWeakHypothesisSource->create();
 			pWeakHypothesis->initLearningOptions(args);
 			//pTrainingData->clearIndexSet();
+
 			pWeakHypothesis->setTrainingData(pTrainingData);
+			
 			float energy = pWeakHypothesis->run();
+			
 			//float gamma = pWeakHypothesis->getEdge();
 			//cout << gamma << endl;
 
-			if (_withConstantLearner) // check constant learner if user wants it
+			if ( (_withConstantLearner) || ( energy != energy ) ) // check constant learner if user wants it (if energi is nan, then we chose constant learner
 			{
 				BaseLearner* pConstantWeakHypothesis = pConstantWeakHypothesisSource->create() ;
 				pConstantWeakHypothesis->initLearningOptions(args);
 				pConstantWeakHypothesis->setTrainingData(pTrainingData);
 				float constantEnergy = pConstantWeakHypothesis->run();
 
-				if (constantEnergy <= energy) {
+				if ( (constantEnergy <= energy) || ( energy != energy ) ) {
 					delete pWeakHypothesis;
 					pWeakHypothesis = pConstantWeakHypothesis;
 				}

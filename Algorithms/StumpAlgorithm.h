@@ -197,7 +197,7 @@ namespace MultiBoost {
 			vector<float>& thresholds,
 			vector<sRates>* pMu = NULL, vector<float>* pV = NULL);
 
-	private:
+	protected:
 
 		vector<float> _halfEdges; //!< half of the class-wise edges
 		vector<float> _constantHalfEdges; //!< half of the class-wise edges of the constant classifier
