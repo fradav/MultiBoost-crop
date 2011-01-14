@@ -63,7 +63,7 @@ public:
 
 	/**
 	* The single cut function for a particular feature. This function can return
-	* with zero as well, indicating that the classifier has abstained for classifying
+	* with zero as well, indicating that the classifier abstained to classify
 	* the instance having index idx.
 	* \return +1,-1,0
 	* \date 21/10/2010	 
