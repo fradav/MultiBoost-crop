@@ -46,6 +46,7 @@
 
 namespace MultiBoost {
 
+	
 // ------------------------------------------------------------------------------
 
 void ConstantAlgorithmLSHTC::findConstantWeightsEdges( InputData* pData,
