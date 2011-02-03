@@ -45,8 +45,8 @@
 
 namespace MultiBoost {
 	
-	REGISTER_LEARNER_NAME(HaarSingleStump, HaarSingleStumpLearner)
-	
+	//REGISTER_LEARNER_NAME(HaarSingleStumpLearner, HaarSingleStumpLearner)
+	REGISTER_LEARNER(HaarSingleStumpLearner)
 	// ------------------------------------------------------------------------------
 	
 	void HaarSingleStumpLearner::declareArguments(nor_utils::Args& args)
