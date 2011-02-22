@@ -106,7 +106,6 @@
 * \li The serialization is performed simply by overriding the proper classes
 * of \link MultiBoost::BaseLearner BaseLearner\endlink.
 * \li The classification depends on the strong learner chosen. 
-* \link MultiBoost::ABMHClassifierYahoo ABMHClassifierYahoo\endlink 
 * can classify any type of weak learner that use AdaBoost.MH
 * as strong learner, as long as they implement all the abstract methods.
 *
@@ -143,8 +142,6 @@
 
 #include "StrongLearners/GenericStrongLearner.h"
 #include "WeakLearners/BaseLearner.h" // To get the list of the registered weak learners
-
-#include "Classifiers/ABMHClassifierYahoo.h" // just for -ssfeatures
 
 #include "IO/Serialization.h" // for unserialization
 
@@ -346,13 +343,6 @@ int main(int argc, const char* argv[])
                          1, "<fileFormat>" );
 
    args.declareArgument("headerfile", "The filename of the header file (SVMLight).", 1, "header.txt");
-   //yahoo challenge
-   args.declareArgument("queryfile", "The filename of the query file (Yahoo).", 1, "queries");
-   args.declareArgument("labelsetting", "The labeling of the dataset (LSHTC)."
-						"full, subcat, depth, ndepth, leaf, children",
-						2, "<type> <par>");
-   args.declareArgument("scoring", "Calculation of scoring (Yahoo).", 1, "expweight");
-   //yahoo challenge
 
    args.declareArgument("constant", "Check constant learner in each iteration.", 0, "");
    args.declareArgument("timelimit", "Time limit in minutes", 1, "<minutes>" );
@@ -598,7 +588,7 @@ int main(int argc, const char* argv[])
 
       cerr << "ERROR: ssfeatures has been deactivated for the moment!" << endl;
 
-      //ABMHClassifierYahoo classifier(args, verbose);
+      
       //classifier.saveSingleStumpFeatureData(testFileName, shypFileName, outFileName, numIterations);
    }
 

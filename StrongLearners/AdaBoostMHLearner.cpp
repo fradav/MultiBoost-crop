@@ -189,6 +189,12 @@ namespace MultiBoost {
 
 			if (pTestData)
 				pOutInfo->outputError(pTestData, pConstantWeakHypothesis);
+
+			pOutInfo->outputWeightedError(pTrainingData, pConstantWeakHypothesis);
+			
+			if (pTestData)
+				pOutInfo->outputWeightedError(pTestData, pConstantWeakHypothesis);
+			
 			/*
 			pOutInfo->outputMargins(pTrainingData, pConstantWeakHypothesis);
 			pOutInfo->outputEdge(pTrainingData, pConstantWeakHypothesis);
@@ -835,6 +841,12 @@ namespace MultiBoost {
 		pOutInfo->outputError(pTrainingData, pWeakHypothesis);
 		if (pTestData)
 			pOutInfo->outputError(pTestData, pWeakHypothesis);
+
+		pOutInfo->outputWeightedError(pTrainingData, pWeakHypothesis);
+		if (pTestData)
+			pOutInfo->outputWeightedError(pTestData, pWeakHypothesis);
+		
+		
 		/*
 		pOutInfo->outputMargins(pTrainingData, pWeakHypothesis);
 		pOutInfo->outputEdge(pTrainingData, pWeakHypothesis);

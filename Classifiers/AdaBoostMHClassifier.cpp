@@ -148,6 +148,8 @@ namespace MultiBoost {
 			const int numExamples = pData->getNumExamples();
 			ofstream outRes(outResFileName.c_str());
 
+			outRes << "Instance" << '\t' << "Forecast" << '\t' << "Labels" << '\n';
+			
 			string exampleName;
 
 			for (int i = 0; i < numExamples; ++i)
@@ -159,9 +161,21 @@ namespace MultiBoost {
 					outRes << i << '\t';
 				else
 					outRes << exampleName << '\t';
-
+				
 				// output the predicted class
-				outRes << pData->getClassMap().getNameFromIdx( results[i]->getWinner().first ) << endl;
+				outRes << pData->getClassMap().getNameFromIdx( results[i]->getWinner().first ) << '\t';
+				
+				outRes << '|';
+				
+				vector<Label>& labels = pData->getLabels(i);
+				for (vector<Label>::iterator lIt=labels.begin(); lIt != labels.end(); ++lIt) {
+					if (lIt->y>0) 
+					{
+						outRes << ' ' << pData->getClassMap().getNameFromIdx(lIt->idx);
+					}
+				}
+				
+				outRes << endl;
 			}
 
 			if (_verbose > 0)

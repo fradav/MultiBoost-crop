@@ -67,7 +67,8 @@ namespace MultiBoost {
 	{ 
 		// column names
 		//_outStream << "t\tErrTrn\tErrTst\tMinMTrn\tErrMTrn\tEdge\tMinMTst\tErrMTst\tMAETrn\tMSETrn\tMAETst\tMSETst\tTime\n";
-		_outStream << "t\tErrTrn\tErrTst\tTime\n";
+		//_outStream << "t\tErrTrn\tErrTst\tTime\n";
+		_outStream << "t\tErrTrn\tErrTst\tErrWTrn\tErrWTst\tTime\n";
 		// Intial values for 0th iteration. Basically it's because gnuplot fails
 		// if there isn't any number in a column, which happens with "NA". On the other hand, 
 		// NA is for having exactly the same number and order of columns all the time. 
@@ -126,6 +127,7 @@ namespace MultiBoost {
 		_alphaSums[pData] = 0;
 	}
 
+	
 	// -------------------------------------------------------------------------
 
 	void OutputInfo::outputError(InputData* pData, BaseLearner* pWeakHypothesis)
@@ -260,6 +262,64 @@ namespace MultiBoost {
 
 	}
 
+	// -------------------------------------------------------------------------
+	
+	void OutputInfo::outputWeightedError(InputData* pData, BaseLearner* pWeakHypothesis)
+	{
+		int numClasses = pData->getNumClasses();
+		const int numExamples = pData->getNumExamples();
+		
+		table& g = _gTableMap[pData];
+		vector<Label>::const_iterator lIt;
+		
+		float w = 0.0;
+		float sumWeight = 0;
+		int numErrors = 0;   
+		
+		for (int i = 0; i < numExamples; ++i)
+		{
+			const vector<Label>& labels = pData->getLabels(i);
+			
+			// the vote of the winning negative class
+			float maxNegClass = -numeric_limits<float>::max();
+			// the vote of the winning positive class
+			float minPosClass = numeric_limits<float>::max();
+			
+			float posWeight = numeric_limits<float>::max();
+			
+			for ( lIt = labels.begin(); lIt != labels.end(); ++lIt )
+			{
+				// get the negative winner class
+				if ( lIt->y < 0 && g[i][lIt->idx] > maxNegClass )
+					maxNegClass = g[i][lIt->idx];
+				
+				// get the positive winner class
+				if ( lIt->y > 0 && g[i][lIt->idx] < minPosClass ) {
+					minPosClass = g[i][lIt->idx];
+//#ifdef NOTIWEIGHT					
+					//posWeight = lIt->weight;
+//#else					
+					posWeight = lIt->initialWeight;
+//#endif
+				}
+			}
+			
+			// if the vote for the worst positive label is lower than the
+			// vote for the highest negative label -> error
+			if (minPosClass <= maxNegClass) {
+				++numErrors; // just indicating that there is missclassification in this case				
+			} else {
+				w += posWeight;
+			}
+			sumWeight += posWeight;
+		}
+		// The error is normalized by the sum of positive weights
+		_outStream << '\t' << 1-(w/sumWeight);
+		
+	}
+	
+	
+	
 	// -------------------------------------------------------------------------
 	// http://www.kddcup-orange.com/evaluation.php
 	void OutputInfo::outputBalancedError(InputData* pData, BaseLearner* pWeakHypothesis)

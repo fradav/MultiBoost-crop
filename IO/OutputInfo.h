@@ -125,7 +125,8 @@ public:
    */
    void outputError(InputData* pData, BaseLearner* pWeakHypothesis);
 
-
+   void outputWeightedError(InputData* pData, BaseLearner* pWeakHypothesis);
+	
    
    void outputBalancedError(InputData* pData, BaseLearner* pWeakHypothesis);
 

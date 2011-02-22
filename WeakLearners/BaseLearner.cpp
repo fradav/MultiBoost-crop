@@ -41,7 +41,7 @@
 //#include "StrongLearners/BrownBoostLearner.h"
 //#include "StrongLearners/LogitBoostLearner.h"
 #include "StrongLearners/FilterBoostLearner.h"
-#include "StrongLearners/ABMHLearnerYahoo.h"
+
 
 #include "Utils/Utils.h" // for is_zero
 
@@ -131,8 +131,6 @@ namespace MultiBoost {
 			//sHypothesis = new LogitBoostLearner();
 		} else if ( sHypothesisName.compare( "FilterBoost" ) == 0 ) {
 			sHypothesis = new FilterBoostLearner();
-		} else if ( sHypothesisName.compare( "YahooBoost" ) == 0 ) {
-			sHypothesis = new ABMHLearnerYahoo();
 		} else {
 			cout << "Unknown strong learner!!!!" << endl;
 			exit( -1 );
