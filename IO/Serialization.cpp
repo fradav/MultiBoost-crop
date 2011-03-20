@@ -114,6 +114,19 @@ namespace MultiBoost {
 			appendHypothesis(i, weakHypotheses[i]);
 	}
 	
+	// -----------------------------------------------------------------------	
+	void Serialization::appendStageSeparatorHeader( int stageIndex )
+	{
+		_shypFile << "\t<stageseparator iter=\"" << stageIndex << "\">" << endl;
+	}
+
+	// -----------------------------------------------------------------------	
+	void Serialization::appendStageSeparatorFooter()
+	{
+		_shypFile << "\t</stageseparator>" << endl;
+	}
+	
+	
 	// -----------------------------------------------------------------------
 	
 	void  Serialization::appendHypothesis(int iteration, BaseLearner* pWeakHypothesis)
@@ -279,7 +292,7 @@ namespace MultiBoost {
 		
 		return false;   
 	}
-	
+		
 	// -----------------------------------------------------------------------
 	
 	bool UnSerialization::seekParamTag(nor_utils::StreamTokenizer& st, const string& tag)

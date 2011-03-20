@@ -319,6 +319,7 @@ int main(int argc, const char* argv[])
 
    args.declareArgument("train", "Performs training.", 2, "<dataFile> <nInterations>");
    args.declareArgument("traintest", "Performs training and test at the same time.", 3, "<trainingDataFile> <testDataFile> <nInterations>");
+   args.declareArgument("trainvalidtest", "Performs training and test at the same time.", 4, "<trainingDataFile> <validDataFile> <testDataFile> <nInterations>");
    args.declareArgument("test", "Test the model.", 3, "<dataFile> <numIters> <shypFile>");
    args.declareArgument("test", "Test the model and output the results", 4, "<datafile> <shypFile> <numIters> <outFile>");
    args.declareArgument("cmatrix", "Print the confusion matrix for the given model.", 2, "<dataFile> <shypFile>");
@@ -357,6 +358,10 @@ int main(int argc, const char* argv[])
    //// ignored for the moment!
    //args.declareArgument("arffheader", "Specify the arff header.", 1, "<arffHeaderFile>");
 
+   // for VJ cascade
+   args.declareArgument("firstStage", "The number of weak classifier in the first stage", 1, "<val>" );
+	
+	
    //////////////////////////////////////////////////////////////////////////
    // Options
 

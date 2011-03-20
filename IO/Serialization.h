@@ -165,6 +165,14 @@ namespace MultiBoost {
 		inline static string getTabs(int numTabs)
 		{ return string(numTabs, '\t'); }
 
+		
+		/**
+		* Put a stage separator in the XML. The VJ cascade consists of stages.
+		* \param stageIndex is the index of stage
+		* \data 17/03/2010
+		*/
+		virtual void appendStageSeparatorHeader( int stageIndex );
+		virtual void appendStageSeparatorFooter();
 	private:
 
 		ofstream _shypFile; //!< The strong learner file
