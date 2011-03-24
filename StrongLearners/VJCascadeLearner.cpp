@@ -104,9 +104,17 @@ namespace MultiBoost {
 		else if ( args.hasArgument("trainvalidtest") ) 
 		{
 			args.getValue("trainvalidtest", 0, _trainFileName);
-			args.getValue("trainvalidtest", 1, _testFileName);
-			args.getValue("trainvalidtest", 2, _validFileName);
+			args.getValue("trainvalidtest", 1, _validFileName);
+			args.getValue("trainvalidtest", 2, _testFileName);
 			args.getValue("trainvalidtest", 3, _numIterations);
+		}
+		
+		if ( args.hasArgument("positivelabel") )
+		{
+			args.getValue("positivelabel", 0, _positiveLabelName);
+		} else {
+			cout << "The name of positive label has to be given!!!" << endl;
+			exit(-1);
 		}
 		
 	}
@@ -118,9 +126,14 @@ namespace MultiBoost {
 		// load the arguments
 		this->getArgs(args);
 		
+		outputHeader();
+		
+		
 		double Fi=1.0;
 		double prevFi=1.0;
-		double Do=1.0;
+		double Di=1.0;
+		double currentTPR = 0.0, currentFPR = 0.0;
+		int th[] = {2,10,10,25,25,60,60,100,100,100};
 		_foundHypotheses.resize(0);
 		
 		// get the registered weak learner (type from name)
@@ -152,6 +165,10 @@ namespace MultiBoost {
 			pTestData->load(_testFileName, IT_TEST, _verbose);
 		}						
 		
+		//get the index of positive label		
+		const NameMap& namemap = pTrainingData->getClassMap();
+		_positiveLabelIndex = namemap.getIdxFromName( _positiveLabelName );
+		
 		Serialization ss(_shypFileName, false );
 		ss.writeHeader(_baseLearnerName); // this must go after resumeProcess has been called
 		
@@ -159,11 +176,29 @@ namespace MultiBoost {
 		if (_verbose == 1)
 			cout << "Learning in progress..." << endl;
 		
-		vector<bool> _activeTrainInstances(pTrainingData->getNumExamples());
-		fill(_activeTrainInstances.begin(),_activeTrainInstances.end(), true );
+		vector<CascadeOutputInformation> _activeTrainInstances(pTrainingData->getNumExamples());
+		vector<CascadeOutputInformation>::iterator it;
+		for( it=_activeTrainInstances.begin(); it != _activeTrainInstances.end(); ++it )
+		{
+			it->active=true;
+		}		
 		
-		vector<bool> _activeValidationInstances(pValidationData->getNumExamples());
-		fill(_activeValidationInstances.begin(),_activeValidationInstances.end(), true );
+		vector<CascadeOutputInformation> _activeValidationInstances(pValidationData->getNumExamples());
+		for( it=_activeValidationInstances.begin(); it != _activeValidationInstances.end(); ++it )
+		{
+			it->active=true;
+		}		
+		
+		vector<CascadeOutputInformation> _activeTestInstances(0);
+		if (pTestData)
+		{
+			_activeTestInstances.resize(pTestData->getNumExamples());
+			for( it=_activeTestInstances.begin(); it != _activeTestInstances.end(); ++it )
+			{
+				it->active=true;
+			}					
+		}
+		
 		///////////////////////////////////////////////////////////////////////
 		// Starting the Cascad main loop
 		///////////////////////////////////////////////////////////////////////		
@@ -171,21 +206,57 @@ namespace MultiBoost {
 		{
 			// filter data
 			set< int > ind;
-			for(int i=0; i<_activeTrainInstances.size(); ++i) ind.insert(i);
-			pTrainingData->loadIndexSet( ind );
 			
 			ind.clear();
-			for(int i=0; i<_activeValidationInstances.size(); ++i) ind.insert(i);
-			pValidationData->loadIndexSet( ind );
+			for(int i=0; i<_activeTrainInstances.size(); ++i) 
+				if (_activeTrainInstances[i].active) ind.insert(i);
 			
+			pTrainingData->loadIndexSet( ind );
+			
+			//cout << "Size of training: " << pTrainingData->getNumExamples() << endl;
+			
+			/*
+			 ind.clear();
+			 for(int i=0; i<_activeValidationInstances.size(); ++i)
+			 if (_activeValidInstances[i].active) ind.insert(i);
+			 
+			 pValidationData->loadIndexSet( ind );
+			 */
+			/*
+			 if (pTestData)
+			 {
+			 ind.clear();
+			 for(int i=0; i<_activeTestInstances.size(); ++i)
+			 if (_activeTestInstances[i].active) ind.insert(i);
+			 
+			 pTestData->loadIndexSet( ind );				
+			 }
+			 */
 			resetWeights(pTrainingData);
-			vector<double> posteriors(0);
+			vector<double> validPosteriors(0);
+			vector<double> trainPosteriors(0);
+			vector<double> testPosteriors(0);
 			
-			Fi=prevFi;
-			Fi *= _maxAcceptableFalsePositiveRate;			
+			//Fi=prevFi;
+			Fi *= _maxAcceptableFalsePositiveRate;						
+			Di *= _minAcceptableDetectionRate;
 			
 			int t=0;
 			_foundHypotheses.resize( _foundHypotheses.size()+1 );
+			
+			// storing the posteriors for validation set
+			trainPosteriors.resize(pTrainingData->getNumExamples());
+			fill(trainPosteriors.begin(), trainPosteriors.end(), 0.0 );
+			validPosteriors.resize(pValidationData->getNumExamples());
+			fill(validPosteriors.begin(), validPosteriors.end(), 0.0 );
+			
+			if (pTestData)
+			{
+				testPosteriors.resize(pTestData->getNumExamples());
+				fill(testPosteriors.begin(), testPosteriors.end(), 0.0 );
+			}
+			
+			double tunedThreshold=0.0;
 			///////////////////////////////////////////////////////////////////////
 			// Starting the AdaBoost main loop
 			///////////////////////////////////////////////////////////////////////
@@ -258,18 +329,139 @@ namespace MultiBoost {
 				_foundHypotheses[stagei].push_back(pWeakHypothesis); 
 				
 				// evaluate current detector on validation set
-				calculatePosteriors( pValidationData, _foundHypotheses[stagei], posteriors );
+				updatePosteriors( pTrainingData, pWeakHypothesis, trainPosteriors );
+				updatePosteriors( pValidationData, pWeakHypothesis, validPosteriors );
+				if (pTestData) updatePosteriors( pTestData, pWeakHypothesis, testPosteriors );
 				
+				// caclualte the current detection rate and false positive rate				
+				//getTPRandFPR( pValidationData, validPosteriors, currentTPR, currentFPR );				
+				//if (_verbose>4)
+				//	cout << "Current TPR: " << currentTPR << " Current FPR: " << currentFPR << endl << flush;
 				
+				tunedThreshold = getThresholdBasedOnTPR( pValidationData, validPosteriors, Di, currentTPR, currentFPR );
 				
+				if (_verbose>1)
+				{
+					cout << "**** Threshold: " << tunedThreshold << endl; //"\tExpected detection rate: " << Di << endl;
+					cout << "**** Current TPR: " << currentTPR << "(Expected: " << Di << ")" << endl;
+					cout << "**** Current FPR: " << currentFPR << "(Expected: " << Fi << ")" << endl << flush;
+				}
+				
+				//if (((currentFPR<(prevFi*_maxAcceptableFalsePositiveRate)) || (t>1000))&&(!(t<th[stagei])))
+				if (((currentFPR<(Fi)) || (t>1000))&&(!(t<2)))
+				{
+					if (t>1000)
+					{
+						cout << "Warning maximal iteration number per stage has reached!!!!" << endl;
+					}
+					
+					break;
+				}
 				
 				t++;
 				//delete pWeakHypothesis;
 			}  // loop on iterations
-			// filter data set
+			
+			// store threshold
+			_thresholds.push_back(tunedThreshold);
+			
+			// filter training dataset data set and generate negative set for the next iteration
+			pTrainingData->clearIndexSet();
+			trainPosteriors.resize(pTrainingData->getNumExamples());
+			calculatePosteriors( pTrainingData, _foundHypotheses[stagei], trainPosteriors );
+			int posNum=0;
+			int negNum=0;
+			for( int i=0; i < _activeTrainInstances.size(); ++i )
+			{	
+				vector<Label>& labels = pTrainingData->getLabels(i);				
+				if (labels[_positiveLabelIndex].y>0)
+				{	
+					posNum++;
+					_activeTrainInstances[i].active=true; // all positive
+				} else {
+					if ( trainPosteriors[i] >= tunedThreshold )
+					{
+						negNum++;
+						_activeTrainInstances[i].active=true; // all false positive
+					} else {
+						_activeTrainInstances[i].active=false;
+					}
+				}
+			}		
+			// calculate the overall cascade performance
+			forecastOverAllCascade( pValidationData, validPosteriors, _activeValidationInstances, tunedThreshold );
+			if (pTestData) forecastOverAllCascade( pTestData, testPosteriors, _activeTestInstances, tunedThreshold );
+			
+			/*
+			 _output << "stage," << stagei << endl;
+			 _output << "whnum," << _foundHypotheses[stagei].size() << endl;
+			 _output << "thres," << tunedThreshold << endl;
+			 */
+			_output << (stagei+1) << "\t";
+			_output << _foundHypotheses[stagei].size() << "\t";
 			
 			
+			//_output << "valid" << endl;
+			outputOverAllCascadeResult( pValidationData, _activeValidationInstances );
+			if (pTestData) 
+			{
+				//_output << "test" << endl;
+				outputOverAllCascadeResult( pTestData, _activeTestInstances );			
+			}
+			_output << (posNum+negNum) << "\t" << posNum << "\t" << negNum << "\t" << endl;
+			_output << endl;
 			
+			
+			if (_verbose>1 )
+			{
+				cout << "****************************************************************" << endl;
+				cout << "**** STOP ADABOOST****" << endl; 
+				cout << "**** Stage:\t" << stagei+1 << endl; 
+				cout << "**** It. num:\t" << _foundHypotheses[stagei].size() << endl;
+				cout << "Training set: \t" << (posNum+negNum) << "(" << posNum << "/" << negNum << ")" << endl;
+				cout << "****************************************************************" << endl;
+			}
+			
+
+			
+			/*
+			 if (stagei==0)
+			 {
+			 _validTable.push_back(validPosteriors);
+			 if (pTestData)
+			 {
+			 calculatePosteriors( pTestData, _foundHypotheses[stagei], testPosteriors );
+			 _testTable.push_back( testPosteriors );
+			 }
+			 }
+			 */
+			
+			
+			/*
+			 pValidationData->clearIndexSet();
+			 validPosteriors.resize(pValidationData->getNumExamples());
+			 calculatePosteriors( pValidationData, _foundHypotheses[stagei], validPosteriors );
+			 posNum=0;
+			 negNum=0;
+			 for( int i=0; i < _activeValidationInstances.size(); ++i )
+			 {	
+			 vector<Label>& labels = pValidationData->getLabels(i);				
+			 if (labels[_positiveLabelIndex].y>0)
+			 {	
+			 posNum++;
+			 _activeValidationInstances[i].active=true; // all positive
+			 } else {
+			 if ( validPosteriors[i] >= tunedThreshold )
+			 {
+			 negNum++;
+			 _activeValidationInstances[i].active=true; // all false positive
+			 }
+			 }
+			 }		
+			 
+			 
+			 cout << "The size of validation dataset: " << (posNum+negNum) << "(" << posNum << "/" << negNum << ")" << endl;
+			 */
 			
 			
 			//_maxAcceptableFalsePositiveRate
@@ -296,19 +488,36 @@ namespace MultiBoost {
 		if (pTestData)
 			delete pTestData;
 		
+		_output.close();
+		
+		
 		if (_verbose > 0)
 			cout << "Learning completed." << endl;
 	}
 	
 	// -------------------------------------------------------------------------
-	void VJCascadeLearner::calculatePosteriors( InputData* pData, vector<BaseLearner*>& weakHypotheses, vector<double>& posteriors )
+	void VJCascadeLearner::updatePosteriors( InputData* pData, BaseLearner* weakHypotheses, vector<double>& posteriors )
 	{
 		const int numExamples = pData->getNumExamples();		
-		double sumAlpha=0.0;
+		
+		double alpha = weakHypotheses->getAlpha();
+		// for every point
+		for (int i = 0; i < numExamples; ++i)
+		{
+			// just for the negative class
+			posteriors[i] += alpha * weakHypotheses->classify(pData, i, _positiveLabelIndex);
+		}			
+	}
+	
+	
+	// -------------------------------------------------------------------------
+	void VJCascadeLearner::calculatePosteriors( InputData* pData, vector<BaseLearner*>& weakHypotheses, vector<double>& posteriors )
+	{
+		const int numExamples = pData->getNumExamples();			
 		
 		posteriors.resize(numExamples);
 		fill( posteriors.begin(), posteriors.end(), 0.0 );
-
+		
 		vector<BaseLearner*>::iterator whyIt = weakHypotheses.begin();				
 		for (;whyIt != weakHypotheses.end(); ++whyIt )
 		{
@@ -319,19 +528,19 @@ namespace MultiBoost {
 			for (int i = 0; i < numExamples; ++i)
 			{
 				// just for the negative class
-				posteriors[i] += alpha * currWeakHyp->classify(pData, i, 0);
+				posteriors[i] += alpha * currWeakHyp->classify(pData, i, _positiveLabelIndex);
 			}			
 		}
 		/*
-		for (int i = 0; i < numExamples; ++i)
-		{
-			// just for the negative class
-			posteriors[i] /= sumAlpha;
-		}			
-		*/
+		 for (int i = 0; i < numExamples; ++i)
+		 {
+		 // just for the negative class
+		 posteriors[i] /= sumAlpha;
+		 }			
+		 */
 	}
-							 
-											   
+	
+	
 	// -------------------------------------------------------------------------							 
 	void VJCascadeLearner::classify(const nor_utils::Args& args)
 	{
@@ -477,7 +686,7 @@ namespace MultiBoost {
 			for (lIt = labels.begin(); lIt != labels.end(); ++lIt )
 			{
 				_hy[i][lIt->idx] = pWeakHypothesis->classify(pData, i, lIt->idx) * // h_l(x_i)
-				lIt->y;
+			    lIt->y;
 				Z += lIt->weight * // w
 				exp( 
 					-alpha * _hy[i][lIt->idx] // -alpha * h_l(x_i) * y_i
@@ -582,10 +791,12 @@ namespace MultiBoost {
 	
 	void VJCascadeLearner::resetWeights(InputData* pData)
 	{
+		// this weighting corresponds to the sharepoint one
 		int numOfClasses = pData->getNumClasses();
 		vector< int > numPerClasses(numOfClasses);
 		int numOfSamples = pData->getNumExamples();
-		vector< double > wi( numOfClasses );		
+		vector< double > wi( numOfClasses );
+		vector< double > wic( numOfClasses );
 		
 		fill(numPerClasses.begin(),numPerClasses.end(), 0 );
 		for (int i = 0; i < numOfSamples; ++i)
@@ -604,7 +815,8 @@ namespace MultiBoost {
 		
 		// we assume pl = 1/K
 		for( int i = 0; i < numOfClasses; i ++ ) {
-			wi[i] =  1.0  / (2.0 * numPerClasses[i]);
+			wi[i] =  1.0  / (4.0 * numPerClasses[i]);
+			wic[i] = 1.0 / (4.0 * ( numOfSamples - numPerClasses[i] ));
 		}
 		//cout << endl;
 		
@@ -618,14 +830,12 @@ namespace MultiBoost {
 			vector<Label>& labels = pData->getLabels(i);
 			vector<Label>::iterator lIt;
 			
-			float sumPos = 0;
-			float sumNeg = 0;
-			
 			// first find the sum of the weights					
 			int i = 0;
 			for ( lIt = labels.begin(); lIt != labels.end(); ++lIt, i++ )
 			{
-				lIt->weight = wi[lIt->idx];
+				if (lIt->y>0) lIt->weight = wi[lIt->idx];
+				else lIt->weight=wic[lIt->idx];
 			}
 			
 		}
@@ -641,15 +851,407 @@ namespace MultiBoost {
 				sumWeight += lIt->weight;
 		}
 		
-		if ( !nor_utils::is_zero(sumWeight-1.0, 1E-3 ) )
+		if ( !nor_utils::is_zero(sumWeight-1.0, 1E-6 ) )
 		{
 			cerr << "\nERROR: Sum of weights (" << sumWeight << ") != 1!" << endl;
 			cerr << "Try a different weight policy (--weightpolicy under 'Basic Algorithm Options')!" << endl;
 			//exit(1);
 		}
 		
-	
+		
+	}
+	// -------------------------------------------------------------------------
+	void VJCascadeLearner::getTPRandFPR( InputData* pData, vector<double>& posteriors, double& TPR, double& FPR, const double threshold )
+	{
+		const int numOfExamples = pData->getNumExamples();
+		int TP=0,FP=0;
+		int P=0,N=0;
+		double currentTPR =0.0;
+		
+		for(int i=0; i<numOfExamples; ++i )
+		{
+			int forecast = 0;
+			if (posteriors[i] > threshold ) forecast = 1;
+			
+			vector<Label>& labels = pData->getLabels(i);
+			
+			if (labels[_positiveLabelIndex].y>0)
+				//if (pData->hasLabel(_positiveLabelIndex, i) ) //positive element
+			{
+				P++;
+				if (forecast==1) TP++;
+			} else {
+				N++;
+				if (forecast==1) FP++;
+			}			
+		}	
+		TPR = TP / (double)P;
+		FPR = FP / (double)N;
 	}
 	
 	// -------------------------------------------------------------------------
+	double VJCascadeLearner::getThresholdBasedOnTPR( InputData* pData, vector<double>& posteriors, const double expectedTPR, double& TPR, double& FPR )
+	{
+		const int numOfExamples = pData->getNumExamples();
+		vector<int> numPerClasses(2);
+		int TP=0,FP=0;		
+		double threshold=numeric_limits<double>::max();
+		
+		vector<pair<double,int> > sortedPosteriors(posteriors.size());
+		
+		for(int i=0; i<numOfExamples; ++i )
+		{
+			//cout << posteriors[i] << " ";
+			sortedPosteriors[i].first = posteriors[i];
+			
+			vector<Label>& labels = pData->getLabels(i);
+			
+			if (labels[_positiveLabelIndex].y>0)				
+				//if (pData->hasLabel(_positiveLabelIndex, i) ) //positive element
+			{
+				sortedPosteriors[i].second=1;
+			} else {
+				sortedPosteriors[i].second=0;
+			}						
+		}
+		
+		sort( sortedPosteriors.begin(), sortedPosteriors.end(), 
+			 nor_utils::comparePair< 1, double, int, greater<double> >() );
+		
+		
+		
+		fill(numPerClasses.begin(),numPerClasses.end(), 0 );
+		for (int i = 0; i < numOfExamples; ++i)
+		{
+			vector<Label>& labels = pData->getLabels(i);
+			vector<Label>::iterator lIt;
+			
+			for ( lIt = labels.begin(); lIt != labels.end(); ++lIt )
+			{
+				if ( lIt->y > 0 )
+					numPerClasses[lIt->idx]++;
+			}
+			
+		}			
+		
+		
+		
+		//FP=numPerClasses[1-_positiveLabelIndex];		
+		FP=TP=0;
+		threshold=sortedPosteriors[0].first+numeric_limits<double>::min();
+		
+		for(int i=0; i<numOfExamples; ++i )
+		{
+			
+			if (sortedPosteriors[i].second) TP++;
+			else FP++;
+			
+			
+			double currentTPR = TP / (double)numPerClasses[_positiveLabelIndex];
+			double currentFPR = FP / (double)numPerClasses[1-_positiveLabelIndex];
+			
+			//cout << currentTPR <<  "\t" << currentFPR << endl << flush;
+			
+			if ((i>0)&&(sortedPosteriors[i-1].first!=sortedPosteriors[i].first))
+			{
+				threshold=(sortedPosteriors[i-1].first+sortedPosteriors[i].first)/2;
+				if ( currentTPR > expectedTPR ) {
+					break;
+				}
+			}
+			
+		}	
+		
+		TPR = TP/(double)numPerClasses[_positiveLabelIndex];
+		FPR = FP/(double)numPerClasses[1-_positiveLabelIndex];
+		
+		return threshold;
+	}
+	// -------------------------------------------------------------------------
+	void VJCascadeLearner::forecastOverAllCascade( InputData* pData, vector< double >& posteriors, vector<CascadeOutputInformation>& cascadeData, const double threshold )
+	{
+		const int numOfExamples = pData->getNumExamples();
+		bool isPos;
+		int sumOfWeakClassifier=0;
+		int stagei = _foundHypotheses.size();
+		//collect cascade information
+		for(int i=0; i<_foundHypotheses.size(); ++i)
+		{
+			sumOfWeakClassifier += _foundHypotheses[i].size();
+		}
+		
+		
+		for(int i=0; i<numOfExamples; ++i )
+		{
+			vector<Label>& labels = pData->getLabels(i);
+			if (labels[_positiveLabelIndex].y>0)				
+				isPos = true;
+			else 
+				isPos =false;			
+			
+			
+			//cout << posteriors[i] << " ";
+			if (cascadeData[i].active)
+			{
+				if (posteriors[i]<threshold)
+				{
+					cascadeData[i].active = false;
+					cascadeData[i].forecast=0;
+				} else {
+					cascadeData[i].active = true;
+					cascadeData[i].forecast=1;					
+				}
+				cascadeData[i].classifiedInStage=stagei;
+				cascadeData[i].numberOfUsedClassifier=sumOfWeakClassifier;
+				cascadeData[i].score=posteriors[i];				
+			}			
+		}				
+	}
+	
+	// -------------------------------------------------------------------------
+	void VJCascadeLearner::outputHeader()
+	{
+		// open outfile
+		_output.open(_outputInfoFile.c_str());
+		if ( ! _output.is_open() )
+		{
+			cout << "Cannot open output file" << endl;
+			exit(-1);
+		}	
+		_output << "Stage\t";
+		_output << "Whyp number\t";		
+		//_output << "Stage\t";	
+		
+		_output << "validFPR\t";
+		_output << "validTPR\t";		
+		_output << "validROC\t";
+		_output << "validAvgStage\t";
+		_output << "validAvgwhyp\t";
+		
+		_output << "testFPR\t";
+		_output << "testTPR\t";		
+		_output << "testROC\t";	
+		_output << "testAvgStage\t";
+		_output << "testAvgwhyp\t";
+		
+		_output << "Dataset\t";
+		_output << "Pos\t";
+		_output << "Neg\t";
+		
+		_output << endl << flush;
+	}
+	
+	
+	// -------------------------------------------------------------------------
+	void VJCascadeLearner::outputOverAllCascadeResult( InputData* pData, vector<CascadeOutputInformation>& cascadeData )
+	{
+		const int numOfExamples = pData->getNumExamples();
+		bool isPos;
+		int sumOfWeakClassifier=0;
+		int stagei = _foundHypotheses.size();
+		vector<double> alphas(_foundHypotheses.size());
+		
+		//collect cascade information
+		fill( alphas.begin(),alphas.end(),0.0);
+		for(int i=0; i<_foundHypotheses.size(); ++i)
+		{
+			sumOfWeakClassifier += _foundHypotheses[i].size();
+			vector<BaseLearner*>::iterator it = _foundHypotheses[i].begin();
+			for(;it != _foundHypotheses[i].end(); ++it )
+			{
+				alphas[i] += (*it)->getAlpha();
+			}
+		}
+		
+		int P=0,N=0;
+		int TP=0,FP=0;
+		
+		for(int i=0; i<numOfExamples; ++i )
+		{
+			vector<Label>& labels = pData->getLabels(i);
+			if (labels[_positiveLabelIndex].y>0)
+			{
+				P++;
+				if (cascadeData[i].forecast==1) TP++;
+			} else { 
+				N++;
+				if (cascadeData[i].forecast==1) FP++;				
+			}
+		}		
+		
+		//_output << "TPR," << (TP/((double)P)) << endl;
+		_output << (TP/((double)P)) << "\t";
+		//_output << endl;
+		
+		//_output << "FPR," << (FP/((double)N)) << endl;
+		_output << (FP/((double)N)) << "\t";
+		//_output << endl;
+		
+		//output ROC
+		vector< pair< int, double > > scores( numOfExamples );		
+		
+		for(int i=0; i<numOfExamples; ++i )
+		{
+			double s = (cascadeData[i].score / (alphas[cascadeData[i].classifiedInStage-1]));
+			scores[i].second = s;
+			//_output << "," << cascadeData[i].score;
+			vector<Label>& labels = pData->getLabels(i);
+			if (labels[_positiveLabelIndex].y>0)
+			{
+				scores[i].first=1;				
+			} else { 
+				scores[i].first=0;				
+			}			
+			
+		}		
+		
+		double rocScore = getROC( scores );
+		_output << rocScore << "\t";
+		
+		
+		int sumStage=0;
+		for(int i=0; i<numOfExamples; ++i )
+		{
+			sumStage += cascadeData[i].classifiedInStage;
+		}		
+		_output << sumStage / ((double)numOfExamples) << "\t";
+		
+		int sumWeakHyp=0;
+		for(int i=0; i<numOfExamples; ++i )
+		{
+			sumWeakHyp += cascadeData[i].numberOfUsedClassifier;
+		}		
+		_output << sumWeakHyp / ((double)numOfExamples) << "\t";
+		
+		//_output << endl << flush;
+		
+		if (0)
+		{	
+			_output	<< "origLabs";
+			for(int i=0; i<numOfExamples; ++i )
+			{
+				vector<Label>& labels = pData->getLabels(i);
+				if (labels[_positiveLabelIndex].y>0)
+				{
+					_output << ",1";
+				} else { 
+					_output << ",0";
+				}
+			}		
+			_output << endl;
+			
+			_output << "forecast";
+			for(int i=0; i<numOfExamples; ++i )
+			{
+				_output << "," << cascadeData[i].forecast;
+			}		
+			_output << endl;
+			
+			_output << "classifiedInStage";	
+			for(int i=0; i<numOfExamples; ++i )
+			{
+				_output << "," << cascadeData[i].classifiedInStage;
+			}		
+			_output << endl;
+			
+			_output << "numberOfUsedClassifier";	
+			for(int i=0; i<numOfExamples; ++i )
+			{
+				_output << "," << cascadeData[i].numberOfUsedClassifier;
+			}		
+			_output << endl;
+			
+			_output << "score";	
+			for(int i=0; i<numOfExamples; ++i )
+			{
+				double s = (cascadeData[i].score / (alphas[cascadeData[i].classifiedInStage-1]));
+				_output << "," << s;
+				//_output << "," << cascadeData[i].score;
+			}		
+			
+		}
+		
+	}
+	// -------------------------------------------------------------------------
+	
+	double VJCascadeLearner::getROC( vector< pair< int, double > > data ) {
+		
+		//uni_pred = unique(pred);
+		//[uni_pred, idx] = sort(uni_pred, 'descend');
+		sort( data.begin(), data.end(), nor_utils::comparePair<2, float, float, greater<float> >() );
+		
+		
+		vector< double > uni_pred(data.size());
+		vector< double >::iterator it;
+		
+		int posNum = 0;
+		int negNum = 0;
+		
+		for( size_t i = 0; i < data.size(); i++ ) {
+			uni_pred[i] = data[i].second;
+			if ( data[i].first == 1 ) posNum++;
+			else negNum++;
+		}
+		
+		//copy( pred.begin(), pred.end(), uni_pred.begin() );
+		sort( uni_pred.begin(), uni_pred.end() );
+		it=unique_copy (uni_pred.begin(),uni_pred.end(),uni_pred.begin()); 
+		uni_pred.resize( it - uni_pred.begin() ); 
+		
+		reverse( uni_pred.begin(), uni_pred.end() );
+		
+		uni_pred.push_back( 0.0 );
+		int l = uni_pred.size();
+		
+		//Y = zeros(size(testY));
+		vector< int > Y( data.size() ); 
+		vector< pair< double, double > > M( uni_pred.size() );
+		
+		double x,y;
+		int TP = 0;	
+		int FP = 0;
+		
+		int j = 0;
+		for( int i = 0; i < uni_pred.size(); i++ ) {
+			double th = uni_pred[i];
+			
+			
+			while ( ( j < data.size() ) && ( data[j].second > th ) ) {
+				if ( data[j].first == 1 ) TP++;
+				if ( data[j].first == 0 ) FP++;
+				
+				j++;
+			}
+			
+			if ( FP == 0 )x = 0;
+			else x = ((double)FP)/((double)negNum);
+			
+			if ( TP == 0 )y = 0;
+			else y = ((double)TP)/((double)posNum);
+			
+			
+			M[i] = pair<double, double>(x,y);
+		}
+		
+		sort( M.begin(), M.end(), nor_utils::comparePair<1, float, float, less<float> >()  );
+		sort( M.begin(), M.end(), nor_utils::comparePair<2, float, float, less<float> >() );
+		
+		double prevX = 0.0;
+		double prevY = 0.0;
+		double ROCscore = 0.0;
+		cout.precision(10);
+		for( int i = 0; i < M.size(); i++ ) {
+			ROCscore += ((((M[i].first-prevX)*(M[i].second-prevY))/2)+(M[i].first-prevX)*prevY);
+			prevX = M[i].first;
+			prevY = M[i].second;
+			
+			//cout << ROCscore << endl;
+		}
+		ROCscore += (1-prevX)*prevY;	
+		
+		
+		return ROCscore;
+	}
+	// -------------------------------------------------------------------------
+	
 } // end of namespace MultiBoost

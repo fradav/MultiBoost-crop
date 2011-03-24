@@ -266,16 +266,16 @@ namespace MultiBoost {
 			}
 		}
 		//cout << endl;
+		
+		edge = sumPos - sumNeg;
+		
 		if ( isNormalized )
 		{
 			if ( _pTrainingData->isFiltered() ) {
 				float sumEdge = sumNeg + sumPos;
-				if ( ! nor_utils::is_zero( sumEdge ) ) edge = ( sumPos - sumNeg ) / sumEdge; 
-			}
-		} else {
-			edge = sumPos - sumNeg;
+				if ( ! nor_utils::is_zero( sumEdge ) ) edge /= sumEdge; 
+			} 
 		}
-
 		return edge;
 	}
 	// -----------------------------------------------------------------------

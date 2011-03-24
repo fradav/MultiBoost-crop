@@ -755,9 +755,7 @@ namespace MultiBoost {
 		const int numExamples = pData->getNumExamples();
 
 		if (_verbose > 0)
-			cout << "Done!" << endl;
-
-		const int colSize = 7;
+			cout << "Done!" << endl;		
 
 		vector< pair< int, double> > sortedExample( numExamples );
 		

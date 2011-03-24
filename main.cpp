@@ -360,6 +360,7 @@ int main(int argc, const char* argv[])
 
    // for VJ cascade
    args.declareArgument("firstStage", "The number of weak classifier in the first stage", 1, "<val>" );
+   args.declareArgument("positivelabel", "The name of positive label", 1, "<label>" );
 	
 	
    //////////////////////////////////////////////////////////////////////////
@@ -482,7 +483,8 @@ int main(int argc, const char* argv[])
    GenericStrongLearner* pModel = NULL;
 
    if ( args.hasArgument("train") ||
-        args.hasArgument("traintest") )
+        args.hasArgument("traintest") || 
+	    args.hasArgument("trainvalidtest") ) // for Viola-Jones Cascade
    {
 
       // get the name of the learner

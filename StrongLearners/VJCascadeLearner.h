@@ -57,6 +57,15 @@ namespace MultiBoost {
 	class InputData;
 	class Serialization;
 	
+	
+	struct CascadeOutputInformation {
+		bool active;
+		int forecast;
+		int classifiedInStage;
+		int numberOfUsedClassifier;
+		double score;
+	};
+	
 	/**
 	 * The AdaBoost learner. This class performs the meta-learning
 	 * by calling the weak learners and updating the weights.
@@ -74,7 +83,9 @@ namespace MultiBoost {
 		 */
 		VJCascadeLearner()
 		: _numIterations(0), _maxTime(-1), _verbose(1), _smallVal(1E-10), _stageStartNumber(2),
-        _resumeShypFileName(""), _outputInfoFile(""), _withConstantLearner(false), _maxAcceptableFalsePositiveRate(0.05), _minAcceptableDetectionRate(0.95){}
+        _resumeShypFileName(""), _outputInfoFile(""), _withConstantLearner(false),
+		_maxAcceptableFalsePositiveRate(0.6), _minAcceptableDetectionRate(0.99),
+		_positiveLabelName(""), _positiveLabelIndex(0), _thresholds(0) {}
 		
 		/**
 		 * Start the learning process.
@@ -155,10 +166,20 @@ namespace MultiBoost {
 		int resumeWeakLearners(InputData* pTrainingData);
 		
 		
+		void updatePosteriors( InputData* pData, BaseLearner* weakhyps, vector<double>& posteriors );
 		void calculatePosteriors( InputData* pData, vector<BaseLearner*>& weakhyps, vector<double>& posteriors );
 		
+		void getTPRandFPR( InputData* pData, vector<double>& posteriors, double& TPR, double& FPR, const double threshold = 0.0 );
+		double getThresholdBasedOnTPR( InputData* pData, vector<double>& posteriors, const double expectedTPR, double& TPR, double& FPR );
+		void forecastOverAllCascade( InputData* pData, vector< double >& posteriors, vector<CascadeOutputInformation>& cascadeData, const double threshold );
+		
+		// for output
+		void outputHeader();
+		void outputOverAllCascadeResult( InputData* pData, vector<CascadeOutputInformation>& cascadeData );
+		double getROC( vector< pair< int, double > > data );
+		
 		vector<vector<BaseLearner*> >  _foundHypotheses; //!< The list of the hypotheses found.
-		vector<vector<double> >  _threshold; //!< The list of the hypotheses found.
+		vector<double >  _thresholds; //!< The list of the hypotheses found.
 		
 		string  _baseLearnerName; //!< The name of the basic learner used by AdaBoost. 
 		string  _shypFileName; //!< File name of the strong hypothesis.
@@ -167,6 +188,11 @@ namespace MultiBoost {
 		string  _trainFileName;
 		string  _validFileName;
 		string  _testFileName;
+		
+		ofstream _output;
+		
+		string	_positiveLabelName;
+		int		_positiveLabelIndex;
 		
 		int     _numIterations;
 		int     _maxTime; //!< Time limit for the whole processing. Default: no time limit (-1).		
@@ -194,7 +220,8 @@ namespace MultiBoost {
 		double _maxAcceptableFalsePositiveRate; // f
 		double _minAcceptableDetectionRate; // d
 		
-		
+		vector<vector<double> > _validTable;
+		vector<vector<double> > _testTable;		
 		////////////////////////////////////////////////////////////////
 	private:
 		/**
