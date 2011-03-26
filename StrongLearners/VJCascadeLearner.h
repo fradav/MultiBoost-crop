@@ -51,13 +51,7 @@ using namespace std;
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 namespace MultiBoost {
-	
-	class OutputInfo;
-	class BaseLearner;
-	class InputData;
-	class Serialization;
-	
-	
+		
 	struct CascadeOutputInformation {
 		bool active;
 		int forecast;
@@ -165,7 +159,7 @@ namespace MultiBoost {
 		 */
 		int resumeWeakLearners(InputData* pTrainingData);
 		
-		
+		void checkWeights( InputData* pData );
 		void updatePosteriors( InputData* pData, BaseLearner* weakhyps, vector<double>& posteriors );
 		void calculatePosteriors( InputData* pData, vector<BaseLearner*>& weakhyps, vector<double>& posteriors );
 		

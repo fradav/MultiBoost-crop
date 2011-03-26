@@ -58,15 +58,12 @@ namespace MultiBoost {
 	int		InputData::loadIndexSet( set< int > ind ) {
 		int i = 0;
 		//upload the indirection
-		this->_usedIndices.clear();
-		this->_rawIndices.clear();
+		for (int j = 0; j < this->_rawIndices.size(); j++) this->_rawIndices[j] = -1;
 
 		map<int, int> tmpPointsPerClass;
 		
 		for( set< int >::iterator it = ind.begin(); it != ind.end(); it++ ) {
 			this->_indirectIndices[i] = *it;
-			this->_usedIndices.insert( *it );
-
 			this->_rawIndices[*it] = i;
 
 			i++;
@@ -101,12 +98,9 @@ namespace MultiBoost {
 
 	// ------------------------------------------------------------------------
 	void		InputData::clearIndexSet( void ) {
-		this->_usedIndices.clear();
-		this->_rawIndices.clear();
 
 		for( int i = 0; i < this->_pData->getNumExample(); i++ ) {
 			this->_indirectIndices[ i ] = i;
-			this->_usedIndices.insert( i );
 			this->_rawIndices[ i ] = i;
 		}
 		this->_numExamples = this->_pData->getNumExample();

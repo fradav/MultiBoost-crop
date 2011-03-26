@@ -45,6 +45,8 @@
 #include <utility> // for pair
 #include <iosfwd> // for I/O
 #include <limits> 
+#include <exception>
+#include <stdexcept> // out_of_range exception
 
 #include "Utils/Args.h"
 #include "Defaults.h" // for MB_DEBUG
@@ -56,6 +58,7 @@
 
 //#include "Parser.h"
 #include <cassert>
+
 
 using namespace std;
 
@@ -84,8 +87,10 @@ namespace MultiBoost {
 	protected:
 		bool   _hasExampleName, _classInLastColumn;
 		vector< int >	_indirectIndices;
-		set< int >		_usedIndices; // this  will contain the indeces we use
-		map< int, int > _rawIndices;
+		// XXX fradav merged previous set<int> _usedIndices and map<int,int> _rawIndices
+		// unused indices are now just -1
+		// Please don't use _usedIndices anymore, but the function isUsedIndice(int)
+		vector< int > _rawIndices;
 	public:
 
 		/**
@@ -96,9 +101,11 @@ namespace MultiBoost {
 
 
 		virtual int getOrderBasedOnRawIndex( int rawIndex ) {
-			map<int, int>::iterator it = this->_rawIndices.find( rawIndex );
-			if ( it == this->_rawIndices.end() ) return -1;
-			else return it->second;
+		  try { 
+		    return _rawIndices.at(rawIndex);
+		  } catch (out_of_range e) { // XXX fradav should it happen ?
+		    return -1;
+		  }
 		}
 
 		virtual bool isSamplesFromOneClass() {
@@ -140,9 +147,10 @@ namespace MultiBoost {
 				//set the num of examples of the derived class (at the beginning the whole dataset is used by the InputData object )
 				_numExamples = _pData->getNumExample();
 				// need to set the indirect indices
+				_rawIndices = vector<int>(_numExamples);
+
 				for( i=0; i < _numExamples; i++ ) {
 					_indirectIndices.push_back( i );
-					_usedIndices.insert( i );
 					_rawIndices[i] = i;
 				}
 				
@@ -191,9 +199,8 @@ namespace MultiBoost {
 				return _pData->getExamples(); 
 			} else {		
 				_subset.clear();
-				for ( set<int>::iterator it = _usedIndices.begin(); it != _usedIndices.end(); it++ ) {
-					//Example e = this->getExample( *it );
-					_subset.push_back( this->getExample( *it ) );
+				for(int i = 0; i < _rawIndices.size(); i++) {
+				  if (_rawIndices[i] > -1) _subset.push_back( this->_pData->getExample(i) );
 				}
 				return _subset;
 			}
@@ -240,7 +247,11 @@ namespace MultiBoost {
 		
 		virtual void getIndexSet( set< int >& ind )
 		{
-			ind = _usedIndices;
+		  // XXX fradav small caution here : we have to extract the set from the _rawIndices
+		  ind.clear();
+		  for (int i = 0; i < _rawIndices.size(); i++) {
+		    if (_rawIndices[i] > -1) ind.insert(i);
+		  }
 		}
 
 
@@ -253,6 +264,8 @@ namespace MultiBoost {
 		inline bool isFiltered() { return _numExamples != _pData->getNumExample(); }
 
 		inline int getRawIndex( int i ) { return _indirectIndices[i]; }
+
+		inline bool isUsedIndice(int x) { return _rawIndices[x] > -1; }
 
 		float getFeaturewiseMax( int idx ) {
 			float max = numeric_limits<float>::min();

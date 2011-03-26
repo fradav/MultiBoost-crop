@@ -53,8 +53,8 @@ HaarData::~HaarData()
 {
    // delete data
    vector<int*>::iterator it;
-   for (it = _intImages.begin(); it != _intImages.end(); ++it)
-      delete [] *it;
+   //for (it = _intImages.begin(); it != _intImages.end(); ++it)
+   //   delete [] *it;
 }
 
 // ------------------------------------------------------------------------

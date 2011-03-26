@@ -173,7 +173,7 @@ public:
 protected:
     bool checkInput(const string& line, int numColumns);
 
-   vector< int* >   _intImages;       //!< the data of the examples.
+   //vector< int* >   _intImages;       //!< the data of the examples.
 
    static short   _width;  //!< The width of the integral image.
    static short   _height; //!< The height of the integral image. 

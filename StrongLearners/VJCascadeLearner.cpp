@@ -109,6 +109,15 @@ namespace MultiBoost {
 			args.getValue("trainvalidtest", 3, _numIterations);
 		}
 		
+		// Set the value of Minimum Acceptable Detection Rate
+		if ( args.hasArgument("minacctpr") )
+			args.getValue("minacctpr", 0.99, _minAcceptableDetectionRate);  
+		
+		// Set the value of Maximum Acceptable False Positive Rate
+		if ( args.hasArgument("maxaccfpr") )
+			args.getValue("maxaccfpr", 0.6, _maxAcceptableFalsePositiveRate);  
+		
+		
 		if ( args.hasArgument("positivelabel") )
 		{
 			args.getValue("positivelabel", 0, _positiveLabelName);
@@ -117,6 +126,9 @@ namespace MultiBoost {
 			exit(-1);
 		}
 		
+		// --constant: check constant learner in each iteration
+		if ( args.hasArgument("constant") )
+			_withConstantLearner = true;			
 	}
 	
 	// -----------------------------------------------------------------------------------
@@ -129,8 +141,7 @@ namespace MultiBoost {
 		outputHeader();
 		
 		
-		double Fi=1.0;
-		double prevFi=1.0;
+		double Fi=1.0;		
 		double Di=1.0;
 		double currentTPR = 0.0, currentFPR = 0.0;
 		int th[] = {2,10,10,25,25,60,60,100,100,100};
@@ -169,6 +180,12 @@ namespace MultiBoost {
 		const NameMap& namemap = pTrainingData->getClassMap();
 		_positiveLabelIndex = namemap.getIdxFromName( _positiveLabelName );
 		
+		if (_verbose>3)
+		{
+			cout << "Positive label:\t" << _positiveLabelName << endl;
+			cout << "Positive label index:\t" << _positiveLabelIndex << endl;
+		}
+		
 		Serialization ss(_shypFileName, false );
 		ss.writeHeader(_baseLearnerName); // this must go after resumeProcess has been called
 		
@@ -199,19 +216,16 @@ namespace MultiBoost {
 			}					
 		}
 		
+		set<int> trainingIndices;
+		set<int> validationIndices;
+		
 		///////////////////////////////////////////////////////////////////////
 		// Starting the Cascad main loop
 		///////////////////////////////////////////////////////////////////////		
 		for(int stagei=0; stagei < _numIterations; ++stagei )
 		{
 			// filter data
-			set< int > ind;
 			
-			ind.clear();
-			for(int i=0; i<_activeTrainInstances.size(); ++i) 
-				if (_activeTrainInstances[i].active) ind.insert(i);
-			
-			pTrainingData->loadIndexSet( ind );
 			
 			//cout << "Size of training: " << pTrainingData->getNumExamples() << endl;
 			
@@ -296,6 +310,8 @@ namespace MultiBoost {
 				// Updates the weights and returns the edge
 				float gamma = updateWeights(pTrainingData, pWeakHypothesis);
 				
+				//checkWeights(pTrainingData);
+				
 				if (_verbose > 1)
 				{
 					cout << setprecision(5)
@@ -316,7 +332,7 @@ namespace MultiBoost {
 					{
 						cout << "Can't train any further: edge = " << gamma << endl;
 					}
-					
+					//cout << pWeakHypothesis->getEdge(false) << endl << flush; 
 					//          delete pWeakHypothesis;
 					//          break; 
 				}
@@ -331,7 +347,7 @@ namespace MultiBoost {
 				// evaluate current detector on validation set
 				updatePosteriors( pTrainingData, pWeakHypothesis, trainPosteriors );
 				updatePosteriors( pValidationData, pWeakHypothesis, validPosteriors );
-				if (pTestData) updatePosteriors( pTestData, pWeakHypothesis, testPosteriors );
+				//if (pTestData) updatePosteriors( pTestData, pWeakHypothesis, testPosteriors );
 				
 				// caclualte the current detection rate and false positive rate				
 				//getTPRandFPR( pValidationData, validPosteriors, currentTPR, currentFPR );				
@@ -365,30 +381,12 @@ namespace MultiBoost {
 			// store threshold
 			_thresholds.push_back(tunedThreshold);
 			
-			// filter training dataset data set and generate negative set for the next iteration
-			pTrainingData->clearIndexSet();
-			trainPosteriors.resize(pTrainingData->getNumExamples());
-			calculatePosteriors( pTrainingData, _foundHypotheses[stagei], trainPosteriors );
-			int posNum=0;
-			int negNum=0;
-			for( int i=0; i < _activeTrainInstances.size(); ++i )
-			{	
-				vector<Label>& labels = pTrainingData->getLabels(i);				
-				if (labels[_positiveLabelIndex].y>0)
-				{	
-					posNum++;
-					_activeTrainInstances[i].active=true; // all positive
-				} else {
-					if ( trainPosteriors[i] >= tunedThreshold )
-					{
-						negNum++;
-						_activeTrainInstances[i].active=true; // all false positive
-					} else {
-						_activeTrainInstances[i].active=false;
-					}
-				}
-			}		
+			
+			
+			
 			// calculate the overall cascade performance
+			pValidationData->clearIndexSet();
+			validPosteriors.resize(pValidationData->getNumExamples());
 			forecastOverAllCascade( pValidationData, validPosteriors, _activeValidationInstances, tunedThreshold );
 			if (pTestData) forecastOverAllCascade( pTestData, testPosteriors, _activeTestInstances, tunedThreshold );
 			
@@ -408,21 +406,8 @@ namespace MultiBoost {
 				//_output << "test" << endl;
 				outputOverAllCascadeResult( pTestData, _activeTestInstances );			
 			}
-			_output << (posNum+negNum) << "\t" << posNum << "\t" << negNum << "\t" << endl;
-			_output << endl;
 			
 			
-			if (_verbose>1 )
-			{
-				cout << "****************************************************************" << endl;
-				cout << "**** STOP ADABOOST****" << endl; 
-				cout << "**** Stage:\t" << stagei+1 << endl; 
-				cout << "**** It. num:\t" << _foundHypotheses[stagei].size() << endl;
-				cout << "Training set: \t" << (posNum+negNum) << "(" << posNum << "/" << negNum << ")" << endl;
-				cout << "****************************************************************" << endl;
-			}
-			
-
 			
 			/*
 			 if (stagei==0)
@@ -435,34 +420,100 @@ namespace MultiBoost {
 			 }
 			 }
 			 */
+
+			// filter training dataset data set and generate negative set for the next iteration
+			trainingIndices.clear();
+			pTrainingData->clearIndexSet();
+			cout << pTrainingData->getNumExamples() << endl << flush;
+			trainPosteriors.resize(pTrainingData->getNumExamples());
+			calculatePosteriors( pTrainingData, _foundHypotheses[stagei], trainPosteriors );
+
+			int trainPosNum=0;
+			int trainNegNum=0;
+			int validPosNum=0;
+			int validNegNum=0;
+
+			
+			for( int i=0; i < _activeTrainInstances.size(); ++i )
+			{	
+				vector<Label>& labels = pTrainingData->getLabels(i);				
+				if (labels[_positiveLabelIndex].y>0)
+				{	
+					trainPosNum++;
+					_activeTrainInstances[i].active=true; // all positive
+					trainingIndices.insert(i);
+				} else {
+					if ( trainPosteriors[i] >= tunedThreshold )
+					{
+						trainNegNum++;
+						_activeTrainInstances[i].active=true; // all false positive
+						trainingIndices.insert(i);
+					} else {
+						_activeTrainInstances[i].active=false;
+					}
+				}
+			}		
+			// filter training			
+			pTrainingData->loadIndexSet( trainingIndices );
+
+			// output the actual training dataset size
+			_output << (trainPosNum+trainNegNum) << "\t" << trainPosNum << "\t" << trainNegNum << "\t";
+			
+			bool filterValidation = true;
+			if (filterValidation)
+			{
+				validationIndices.clear();
+				pValidationData->clearIndexSet();
+				validPosteriors.resize(pValidationData->getNumExamples());
+				//calculatePosteriors( pValidationData, _foundHypotheses[stagei], validPosteriors );
+				for( int i=0; i < _activeValidationInstances.size(); ++i )
+				{	
+					vector<Label>& labels = pValidationData->getLabels(i);				
+					if (labels[_positiveLabelIndex].y>0)
+					{	
+						validPosNum++;
+						_activeValidationInstances[i].active=true; // all positive
+						validationIndices.insert(i);
+					} else {
+						if ( validPosteriors[i] >= tunedThreshold )
+						{
+							validNegNum++;
+							_activeValidationInstances[i].active=true; // all false positive
+							validationIndices.insert(i);
+						} else {
+							_activeValidationInstances[i].active=false; // all false positive
+						}
+					}
+				}	
+				
+				// filter validation dataset
+				pValidationData->loadIndexSet(validationIndices);
+				_output << (validPosNum+validNegNum) << "\t" << validPosNum << "\t" << validNegNum << "\t";
+				
+				//cout << "The size of validation dataset: " << (validPosNum+validNegNum) << "(" << trainPosNum << "/" << validNegNum << ")" << endl;
+			}		
+						
 			
 			
-			/*
-			 pValidationData->clearIndexSet();
-			 validPosteriors.resize(pValidationData->getNumExamples());
-			 calculatePosteriors( pValidationData, _foundHypotheses[stagei], validPosteriors );
-			 posNum=0;
-			 negNum=0;
-			 for( int i=0; i < _activeValidationInstances.size(); ++i )
-			 {	
-			 vector<Label>& labels = pValidationData->getLabels(i);				
-			 if (labels[_positiveLabelIndex].y>0)
-			 {	
-			 posNum++;
-			 _activeValidationInstances[i].active=true; // all positive
-			 } else {
-			 if ( validPosteriors[i] >= tunedThreshold )
-			 {
-			 negNum++;
-			 _activeValidationInstances[i].active=true; // all false positive
-			 }
-			 }
-			 }		
-			 
-			 
-			 cout << "The size of validation dataset: " << (posNum+negNum) << "(" << posNum << "/" << negNum << ")" << endl;
-			 */
+			if (_verbose>1 )
+			{
+				cout << "****************************************************************" << endl;
+				cout << "**** STOP ADABOOST****" << endl; 
+				cout << "**** Stage:\t" << stagei+1 << endl; 
+				cout << "**** It. num:\t" << _foundHypotheses[stagei].size() << endl;
+				cout << "Validation set: " << (validPosNum+validNegNum) << "(" << trainPosNum << "/" << validNegNum << ")" << endl;
+				cout << "Training set: \t" << (trainPosNum+trainNegNum) << "(" << trainPosNum << "/" << trainNegNum << ")" << endl;
+				cout << "****************************************************************" << endl;
+			}
 			
+			
+			_output << endl;			
+			
+			if ( trainPosNum < 1 )
+			{
+				cout << "ERROR: there is no negative in training set!!!!" << endl;
+				exit(-1);
+			}
 			
 			//_maxAcceptableFalsePositiveRate
 			//_minAcceptableDetectionRate
@@ -788,6 +839,29 @@ namespace MultiBoost {
 	}
 	
 	// -------------------------------------------------------------------------
+	void VJCascadeLearner::checkWeights(InputData* pData)
+	{
+		const int numOfSamples = pData->getNumExamples();
+		double sumWeight = 0;
+		for (int i = 0; i < numOfSamples; ++i)
+		{
+			vector<Label>& labels = pData->getLabels(i);
+			vector<Label>::iterator lIt;
+			
+			// first find the sum of the weights
+			for (lIt = labels.begin(); lIt != labels.end(); ++lIt )
+				sumWeight += lIt->weight;
+		}
+		
+		cout << "Check weights: " << pData->getNumExamples() << endl << flush;
+		
+		if ( !nor_utils::is_zero(sumWeight-1.0, 1E-6 ) )
+		{
+			cerr << "\nERROR: Sum of weights (" << sumWeight << ") != 1!" << endl;
+			//exit(1);
+		}		
+	}
+	// -------------------------------------------------------------------------
 	
 	void VJCascadeLearner::resetWeights(InputData* pData)
 	{
@@ -871,7 +945,7 @@ namespace MultiBoost {
 		for(int i=0; i<numOfExamples; ++i )
 		{
 			int forecast = 0;
-			if (posteriors[i] > threshold ) forecast = 1;
+			if (posteriors[i] >= threshold ) forecast = 1;
 			
 			vector<Label>& labels = pData->getLabels(i);
 			
@@ -991,7 +1065,7 @@ namespace MultiBoost {
 			
 			
 			//cout << posteriors[i] << " ";
-			if (cascadeData[i].active)
+			if (cascadeData[i].active) // active: it is not classified yet
 			{
 				if (posteriors[i]<threshold)
 				{
