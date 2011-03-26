@@ -187,7 +187,7 @@ namespace MultiBoost {
 		}
 		
 		Serialization ss(_shypFileName, false );
-		ss.writeHeader(_baseLearnerName); // this must go after resumeProcess has been called
+		ss.writeCascadeHeader(_baseLearnerName); // this must go after resumeProcess has been called
 		
 		
 		if (_verbose == 1)
@@ -315,9 +315,6 @@ namespace MultiBoost {
 					//          break; 
 				}
 				
-				// append the current weak learner to strong hypothesis file,
-				// that is, serialize it.
-				ss.appendHypothesis(t, pWeakHypothesis);
 				
 				// Add it to the internal list of weak hypotheses
 				_foundHypotheses[stagei].push_back(pWeakHypothesis); 
@@ -497,13 +494,19 @@ namespace MultiBoost {
 			//_minAcceptableDetectionRate
 			
 			/////////////////////////////////////////////////////////
+			// save the weak hypithesis of current stage
+			ss.appendStageSeparatorHeader( stagei, _foundHypotheses[stagei].size() );
+			// append the current weak learner to strong hypothesis file,
+			// that is, serialize it.					
+			for (int t=0 ; t < _foundHypotheses[stagei].size(); ++t )
+				ss.appendHypothesis(t, _foundHypotheses[stagei][t]);
 			ss.appendStageSeparatorFooter();
 			
 		}// end of cascade
 		
 		
 		// write the footer of the strong hypothesis file
-		ss.writeFooter();
+		ss.writeCascadeFooter();
 		
 		// write the weights of the instances if the name of weights file isn't empty
 		//printOutWeights( pTrainingData );

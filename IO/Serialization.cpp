@@ -69,42 +69,73 @@ namespace MultiBoost {
 	
 	// -----------------------------------------------------------------------
 	
+	void Serialization::writeCascadeHeader(const string& weakLearnerName)
+	{
+		// print the header
+		_shypFile << "<?xml version=\"1.0\"?>" << endl;
+		_shypFile << "<cascade>" << endl;
+		_shypFile << standardTag("algo", weakLearnerName, 1) << endl;
+		
+	}
+	
+	
+	// -----------------------------------------------------------------------
+	
 	void Serialization::writeFooter()
 	{
 		// close tag
 		_shypFile << "</multiboost>" << endl;
 		
 		if ( _isComp ) {
-			_shypFile.flush();
-			//cout << "Shypfile size:\t" << _shypFile.tellp() << endl;
-			
-			_shypFile.close();
-			_shypFile.clear();
-			
-			ifstream inFile;
-			string str;
-			char buf[ 4086 ];
-			inFile.open( _shypFileName.c_str() );
-			
-			Bzip2WrapperWriter bzw;
-			
-			bzw.open( _bzipFileName.c_str(), true );
-			
-			getline( inFile, str );
-			while ( inFile ) {
-				sprintf( buf, "%s\n", str.c_str() );
-				bzw << buf;
-				getline( inFile, str );
-			}
-			
-			
-			inFile.close();
-			bzw.close();
-			remove( _shypFileName.c_str() );
+			flushCompressedBuffer();
+		}
+		
+	}
+	// -----------------------------------------------------------------------
+	
+	void Serialization::writeCascadeFooter()
+	{
+		// close tag
+		_shypFile << "</cascade>" << endl;
+		
+		if ( _isComp ) {
+			flushCompressedBuffer();
 		}
 		
 	}
 	
+	
+	// -----------------------------------------------------------------------
+	void Serialization::flushCompressedBuffer()
+	{
+		_shypFile.flush();
+		//cout << "Shypfile size:\t" << _shypFile.tellp() << endl;
+		
+		_shypFile.close();
+		_shypFile.clear();
+		
+		ifstream inFile;
+		string str;
+		char buf[ 4086 ];
+		inFile.open( _shypFileName.c_str() );
+		
+		Bzip2WrapperWriter bzw;
+		
+		bzw.open( _bzipFileName.c_str(), true );
+		
+		getline( inFile, str );
+		while ( inFile ) {
+			sprintf( buf, "%s\n", str.c_str() );
+			bzw << buf;
+			getline( inFile, str );
+		}
+		
+		
+		inFile.close();
+		bzw.close();
+		remove( _shypFileName.c_str() );
+		
+	}
 	// -----------------------------------------------------------------------
 	
 	void Serialization::saveHypotheses(vector<BaseLearner*>& weakHypotheses)
@@ -115,15 +146,15 @@ namespace MultiBoost {
 	}
 	
 	// -----------------------------------------------------------------------	
-	void Serialization::appendStageSeparatorHeader( int stageIndex )
+	void Serialization::appendStageSeparatorHeader( int stageIndex, int weakhypnum )
 	{
-		_shypFile << "\t<stageseparator iter=\"" << stageIndex << "\">" << endl;
+		_shypFile << "\t<stage num=\"" << stageIndex << "\" weakhypnum=\"" <<  weakhypnum << "\">" << endl;
 	}
-
+	
 	// -----------------------------------------------------------------------	
 	void Serialization::appendStageSeparatorFooter()
 	{
-		_shypFile << "\t</stageseparator>" << endl;
+		_shypFile << "\t</stage>" << endl;
 	}
 	
 	
@@ -292,7 +323,7 @@ namespace MultiBoost {
 		
 		return false;   
 	}
-		
+	
 	// -----------------------------------------------------------------------
 	
 	bool UnSerialization::seekParamTag(nor_utils::StreamTokenizer& st, const string& tag)
