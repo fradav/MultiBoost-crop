@@ -224,28 +224,6 @@ namespace MultiBoost {
 		///////////////////////////////////////////////////////////////////////		
 		for(int stagei=0; stagei < _numIterations; ++stagei )
 		{
-			// filter data
-			
-			
-			//cout << "Size of training: " << pTrainingData->getNumExamples() << endl;
-			
-			/*
-			 ind.clear();
-			 for(int i=0; i<_activeValidationInstances.size(); ++i)
-			 if (_activeValidInstances[i].active) ind.insert(i);
-			 
-			 pValidationData->loadIndexSet( ind );
-			 */
-			/*
-			 if (pTestData)
-			 {
-			 ind.clear();
-			 for(int i=0; i<_activeTestInstances.size(); ++i)
-			 if (_activeTestInstances[i].active) ind.insert(i);
-			 
-			 pTestData->loadIndexSet( ind );				
-			 }
-			 */
 			resetWeights(pTrainingData);
 			vector<double> validPosteriors(0);
 			vector<double> trainPosteriors(0);
@@ -347,7 +325,7 @@ namespace MultiBoost {
 				// evaluate current detector on validation set
 				updatePosteriors( pTrainingData, pWeakHypothesis, trainPosteriors );
 				updatePosteriors( pValidationData, pWeakHypothesis, validPosteriors );
-				//if (pTestData) updatePosteriors( pTestData, pWeakHypothesis, testPosteriors );
+				if (pTestData) updatePosteriors( pTestData, pWeakHypothesis, testPosteriors );
 				
 				// caclualte the current detection rate and false positive rate				
 				//getTPRandFPR( pValidationData, validPosteriors, currentTPR, currentFPR );				
@@ -1108,7 +1086,11 @@ namespace MultiBoost {
 		_output << "testAvgStage\t";
 		_output << "testAvgwhyp\t";
 		
-		_output << "Dataset\t";
+		_output << "Training Dataset\t";
+		_output << "Pos\t";
+		_output << "Neg\t";
+
+		_output << "Validation Dataset\t";
 		_output << "Pos\t";
 		_output << "Neg\t";
 		
