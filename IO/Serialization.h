@@ -173,8 +173,8 @@ namespace MultiBoost {
 		 */
 		void writeCascadeHeader(const string& weakLearnerName);
 		void writeCascadeFooter();
-		virtual void appendStageSeparatorHeader( int stageIndex, int hypNum );
-		virtual void appendStageSeparatorFooter();
+		virtual void appendStageSeparatorHeader( int stageIndex, int hypNum, double threshold );
+		//virtual void appendStageSeparatorFooter();
 	protected:
 		void flushCompressedBuffer();
 	private:

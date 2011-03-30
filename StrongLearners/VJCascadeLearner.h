@@ -79,7 +79,7 @@ namespace MultiBoost {
 		: _numIterations(0), _maxTime(-1), _verbose(1), _smallVal(1E-10), _stageStartNumber(2),
         _resumeShypFileName(""), _outputInfoFile(""), _withConstantLearner(false),
 		_maxAcceptableFalsePositiveRate(0.6), _minAcceptableDetectionRate(0.99),
-		_positiveLabelName(""), _positiveLabelIndex(0), _thresholds(0) {}
+		_positiveLabelName(""), _positiveLabelIndex(0), _thresholds(0), _outputPosteriorsFileName("") {}
 		
 		/**
 		 * Start the learning process.
@@ -163,14 +163,18 @@ namespace MultiBoost {
 		void updatePosteriors( InputData* pData, BaseLearner* weakhyps, vector<double>& posteriors );
 		void calculatePosteriors( InputData* pData, vector<BaseLearner*>& weakhyps, vector<double>& posteriors );
 		
-		void getTPRandFPR( InputData* pData, vector<double>& posteriors, double& TPR, double& FPR, const double threshold = 0.0 );
-		double getThresholdBasedOnTPR( InputData* pData, vector<double>& posteriors, const double expectedTPR, double& TPR, double& FPR );
-		void forecastOverAllCascade( InputData* pData, vector< double >& posteriors, vector<CascadeOutputInformation>& cascadeData, const double threshold );
+		virtual void getTPRandFPR( InputData* pData, vector<double>& posteriors, double& TPR, double& FPR, const double threshold = 0.0 );
+		virtual double getThresholdBasedOnTPR( InputData* pData, vector<double>& posteriors, const double expectedTPR, double& TPR, double& FPR );
+		virtual void forecastOverAllCascade( InputData* pData, vector< double >& posteriors, vector<CascadeOutputInformation>& cascadeData, const double threshold );
 		
 		// for output
-		void outputHeader();
-		void outputOverAllCascadeResult( InputData* pData, vector<CascadeOutputInformation>& cascadeData );
-		double getROC( vector< pair< int, double > > data );
+		virtual void outputHeader();
+		virtual void outputOverAllCascadeResult( InputData* pData, vector<CascadeOutputInformation>& cascadeData );
+		
+		// for posteriors
+		virtual void openPosteriorFile(InputData* pValid,InputData* pTest);
+		virtual void closePosteriorFile( void );
+		virtual void outputPosteriors( vector<CascadeOutputInformation>& cascadeData );				
 		
 		vector<vector<BaseLearner*> >  _foundHypotheses; //!< The list of the hypotheses found.
 		vector<double >  _thresholds; //!< The list of the hypotheses found.
@@ -184,6 +188,7 @@ namespace MultiBoost {
 		string  _testFileName;
 		
 		ofstream _output;
+		ofstream _outputPosteriors;
 		
 		string	_positiveLabelName;
 		int		_positiveLabelIndex;
@@ -207,7 +212,7 @@ namespace MultiBoost {
 		 */
 		string  _resumeShypFileName;
 		string  _outputInfoFile; //!< The filename of the step-by-step information file that will be updated
-
+		string  _outputPosteriorsFileName;
 		
 		bool	_withConstantLearner;
 

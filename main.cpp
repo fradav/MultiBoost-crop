@@ -363,6 +363,7 @@ int main(int argc, const char* argv[])
 	args.declareArgument("positivelabel", "The name of positive label", 1, "<labelname>" );
 	args.declareArgument("minacctpr", "The minimum acceptabel detection rate/TPR, see. VJ paper Table 2. par. d (default 0.99)", 1, "<val>" );
 	args.declareArgument("maxaccfpr", "The maximum acceptabel FPR, see. VJ paper Table 2. par. f (default 0.6)", 1, "<val>" );
+	args.declareArgument("stagewiseposteriors", "Output the stagewiseposteriors", 1, "<fname>" );
 	
 	//////////////////////////////////////////////////////////////////////////
 	// Options

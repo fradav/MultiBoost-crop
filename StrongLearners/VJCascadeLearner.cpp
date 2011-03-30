@@ -63,6 +63,10 @@ namespace MultiBoost {
 		if ( args.hasArgument("outputinfo") )
 			args.getValue("outputinfo", 0, _outputInfoFile);
 		
+		// The file with the stagewise posteriors
+		if ( args.hasArgument("stagewiseposteriors") )
+			args.getValue("stagewiseposteriors", 0, _outputPosteriorsFileName);
+		
 		///////////////////////////////////////////////////
 		// get the output strong hypothesis file name, if given
 		if ( args.hasArgument("shypname") )
@@ -138,8 +142,7 @@ namespace MultiBoost {
 		// load the arguments
 		this->getArgs(args);
 		
-		outputHeader();
-		
+		outputHeader();		
 		
 		double Fi=1.0;		
 		double Di=1.0;
@@ -175,7 +178,7 @@ namespace MultiBoost {
 			pTestData->initOptions(args);
 			pTestData->load(_testFileName, IT_TEST, _verbose);
 		}						
-		
+						
 		//get the index of positive label		
 		const NameMap& namemap = pTrainingData->getClassMap();
 		_positiveLabelIndex = namemap.getIdxFromName( _positiveLabelName );
@@ -193,28 +196,30 @@ namespace MultiBoost {
 		if (_verbose == 1)
 			cout << "Learning in progress..." << endl;
 		
-		vector<CascadeOutputInformation> _activeTrainInstances(pTrainingData->getNumExamples());
+		vector<CascadeOutputInformation> activeTrainInstances(pTrainingData->getNumExamples());
 		vector<CascadeOutputInformation>::iterator it;
-		for( it=_activeTrainInstances.begin(); it != _activeTrainInstances.end(); ++it )
+		for( it=activeTrainInstances.begin(); it != activeTrainInstances.end(); ++it )
 		{
 			it->active=true;
 		}		
 		
-		vector<CascadeOutputInformation> _activeValidationInstances(pValidationData->getNumExamples());
-		for( it=_activeValidationInstances.begin(); it != _activeValidationInstances.end(); ++it )
+		vector<CascadeOutputInformation> activeValidationInstances(pValidationData->getNumExamples());
+		for( it=activeValidationInstances.begin(); it != activeValidationInstances.end(); ++it )
 		{
 			it->active=true;
 		}		
 		
-		vector<CascadeOutputInformation> _activeTestInstances(0);
+		vector<CascadeOutputInformation> activeTestInstances(0);
 		if (pTestData)
 		{
-			_activeTestInstances.resize(pTestData->getNumExamples());
-			for( it=_activeTestInstances.begin(); it != _activeTestInstances.end(); ++it )
+			activeTestInstances.resize(pTestData->getNumExamples());
+			for( it=activeTestInstances.begin(); it != activeTestInstances.end(); ++it )
 			{
 				it->active=true;
 			}					
 		}
+		
+		openPosteriorFile(pValidationData, pTestData);
 		
 		set<int> trainingIndices;
 		set<int> validationIndices;
@@ -339,9 +344,9 @@ namespace MultiBoost {
 				}
 				
 				//if (((currentFPR<(prevFi*_maxAcceptableFalsePositiveRate)) || (t>1000))&&(!(t<th[stagei])))
-				if (((currentFPR<(Fi)) || (t>1000))&&(!(t<2)))
+				if (((currentFPR<(Fi)) || (t>10000))&&(!(t<1)))
 				{
-					if (t>1000)
+					if (t>10000)
 					{
 						cout << "Warning maximal iteration number per stage has reached!!!!" << endl;
 					}
@@ -350,7 +355,7 @@ namespace MultiBoost {
 				}
 				
 				t++;
-				//delete pWeakHypothesis;
+				
 			}  // loop on iterations
 			
 			// store threshold
@@ -362,44 +367,29 @@ namespace MultiBoost {
 			// calculate the overall cascade performance
 			pValidationData->clearIndexSet();
 			validPosteriors.resize(pValidationData->getNumExamples());
-			forecastOverAllCascade( pValidationData, validPosteriors, _activeValidationInstances, tunedThreshold );
-			if (pTestData) forecastOverAllCascade( pTestData, testPosteriors, _activeTestInstances, tunedThreshold );
+			calculatePosteriors( pValidationData, _foundHypotheses[stagei], validPosteriors );
 			
-			/*
-			 _output << "stage," << stagei << endl;
-			 _output << "whnum," << _foundHypotheses[stagei].size() << endl;
-			 _output << "thres," << tunedThreshold << endl;
-			 */
+			// this update the current forecast stored in activeValidationInstances
+			forecastOverAllCascade( pValidationData, validPosteriors, activeValidationInstances, tunedThreshold );
+			if (pTestData) forecastOverAllCascade( pTestData, testPosteriors, activeTestInstances, tunedThreshold );
+			
 			_output << (stagei+1) << "\t";
 			_output << _foundHypotheses[stagei].size() << "\t";
 			
 			
 			//_output << "valid" << endl;
-			outputOverAllCascadeResult( pValidationData, _activeValidationInstances );
+			outputOverAllCascadeResult( pValidationData, activeValidationInstances );
 			if (pTestData) 
 			{
 				//_output << "test" << endl;
-				outputOverAllCascadeResult( pTestData, _activeTestInstances );			
+				outputOverAllCascadeResult( pTestData, activeTestInstances );			
 			}
-			
-			
-			
-			/*
-			 if (stagei==0)
-			 {
-			 _validTable.push_back(validPosteriors);
-			 if (pTestData)
-			 {
-			 calculatePosteriors( pTestData, _foundHypotheses[stagei], testPosteriors );
-			 _testTable.push_back( testPosteriors );
-			 }
-			 }
-			 */
+									
 
 			// filter training dataset data set and generate negative set for the next iteration
 			trainingIndices.clear();
 			pTrainingData->clearIndexSet();
-			cout << pTrainingData->getNumExamples() << endl << flush;
+			//cout << pTrainingData->getNumExamples() << endl << flush;
 			trainPosteriors.resize(pTrainingData->getNumExamples());
 			calculatePosteriors( pTrainingData, _foundHypotheses[stagei], trainPosteriors );
 
@@ -409,22 +399,22 @@ namespace MultiBoost {
 			int validNegNum=0;
 
 			
-			for( int i=0; i < _activeTrainInstances.size(); ++i )
+			for( int i=0; i < activeTrainInstances.size(); ++i )
 			{	
 				vector<Label>& labels = pTrainingData->getLabels(i);				
 				if (labels[_positiveLabelIndex].y>0)
 				{	
 					trainPosNum++;
-					_activeTrainInstances[i].active=true; // all positive
+					activeTrainInstances[i].active=true; // all positive
 					trainingIndices.insert(i);
 				} else {
 					if ( trainPosteriors[i] >= tunedThreshold )
 					{
 						trainNegNum++;
-						_activeTrainInstances[i].active=true; // all false positive
+						activeTrainInstances[i].active=true; // all false positive
 						trainingIndices.insert(i);
 					} else {
-						_activeTrainInstances[i].active=false;
+						activeTrainInstances[i].active=false;
 					}
 				}
 			}		
@@ -441,34 +431,34 @@ namespace MultiBoost {
 				pValidationData->clearIndexSet();
 				validPosteriors.resize(pValidationData->getNumExamples());
 				//calculatePosteriors( pValidationData, _foundHypotheses[stagei], validPosteriors );
-				for( int i=0; i < _activeValidationInstances.size(); ++i )
+				for( int i=0; i < activeValidationInstances.size(); ++i )
 				{	
 					vector<Label>& labels = pValidationData->getLabels(i);				
 					if (labels[_positiveLabelIndex].y>0)
 					{	
 						validPosNum++;
-						_activeValidationInstances[i].active=true; // all positive
+						activeValidationInstances[i].active=true; // all positive
 						validationIndices.insert(i);
 					} else {
 						if ( validPosteriors[i] >= tunedThreshold )
 						{
 							validNegNum++;
-							_activeValidationInstances[i].active=true; // all false positive
+							activeValidationInstances[i].active=true; // all false positive
 							validationIndices.insert(i);
 						} else {
-							_activeValidationInstances[i].active=false; // all false positive
+							activeValidationInstances[i].active=false; // all false positive
 						}
 					}
 				}	
 				
 				// filter validation dataset
 				pValidationData->loadIndexSet(validationIndices);
-				_output << (validPosNum+validNegNum) << "\t" << validPosNum << "\t" << validNegNum << "\t";
+				
 				
 				//cout << "The size of validation dataset: " << (validPosNum+validNegNum) << "(" << trainPosNum << "/" << validNegNum << ")" << endl;
 			}		
 						
-			
+			_output << (validPosNum+validNegNum) << "\t" << validPosNum << "\t" << validNegNum << "\t";
 			
 			if (_verbose>1 )
 			{
@@ -484,6 +474,10 @@ namespace MultiBoost {
 			
 			_output << endl;			
 			
+			// output posteriors
+			outputPosteriors( activeValidationInstances );
+			if (pTestData) outputPosteriors( activeTestInstances );
+			
 			if ( trainPosNum < 1 )
 			{
 				cout << "ERROR: there is no negative in training set!!!!" << endl;
@@ -495,12 +489,13 @@ namespace MultiBoost {
 			
 			/////////////////////////////////////////////////////////
 			// save the weak hypithesis of current stage
-			ss.appendStageSeparatorHeader( stagei, _foundHypotheses[stagei].size() );
+			ss.appendStageSeparatorHeader( stagei, _foundHypotheses[stagei].size(), _thresholds[stagei] );
+			//ss.appendStageSeparatorFooter();
 			// append the current weak learner to strong hypothesis file,
 			// that is, serialize it.					
 			for (int t=0 ; t < _foundHypotheses[stagei].size(); ++t )
 				ss.appendHypothesis(t, _foundHypotheses[stagei][t]);
-			ss.appendStageSeparatorFooter();
+			
 			
 		}// end of cascade
 		
@@ -521,7 +516,7 @@ namespace MultiBoost {
 			delete pTestData;
 		
 		_output.close();
-		
+		closePosteriorFile();
 		
 		if (_verbose > 0)
 			cout << "Learning completed." << endl;
@@ -1035,7 +1030,12 @@ namespace MultiBoost {
 			sumOfWeakClassifier += _foundHypotheses[i].size();
 		}
 		
-		
+		double sumalphas = 0.0;
+		for(int i=0; i<_foundHypotheses[stagei-1].size(); ++i)
+		{
+			sumalphas += _foundHypotheses[stagei-1][i]->getAlpha();
+		}
+				
 		for(int i=0; i<numOfExamples; ++i )
 		{
 			vector<Label>& labels = pData->getLabels(i);
@@ -1048,17 +1048,22 @@ namespace MultiBoost {
 			//cout << posteriors[i] << " ";
 			if (cascadeData[i].active) // active: it is not classified yet
 			{
+				cascadeData[i].score=((posteriors[i]/sumalphas)+1)/2;				
 				if (posteriors[i]<threshold)
 				{
-					cascadeData[i].active = false;
+					cascadeData[i].active = false; // classified
 					cascadeData[i].forecast=0;
+					cascadeData[i].score+=(2.0*(stagei-1));//the coefficient 2.0 is used because the stagewise posteriors should not
+					cascadeData[i].score/=((2.0*stagei)+1);
 				} else {
-					cascadeData[i].active = true;
+					cascadeData[i].active = true; // continue
 					cascadeData[i].forecast=1;					
+					cascadeData[i].score+=(2.0*stagei);
+					cascadeData[i].score/=((2.0*stagei)+1);
 				}
+				
 				cascadeData[i].classifiedInStage=stagei;
-				cascadeData[i].numberOfUsedClassifier=sumOfWeakClassifier;
-				cascadeData[i].score=posteriors[i];				
+				cascadeData[i].numberOfUsedClassifier=sumOfWeakClassifier;								
 			}			
 		}				
 	}
@@ -1105,22 +1110,6 @@ namespace MultiBoost {
 	void VJCascadeLearner::outputOverAllCascadeResult( InputData* pData, vector<CascadeOutputInformation>& cascadeData )
 	{
 		const int numOfExamples = pData->getNumExamples();
-		bool isPos;
-		int sumOfWeakClassifier=0;
-		int stagei = _foundHypotheses.size();
-		vector<double> alphas(_foundHypotheses.size());
-		
-		//collect cascade information
-		fill( alphas.begin(),alphas.end(),0.0);
-		for(int i=0; i<_foundHypotheses.size(); ++i)
-		{
-			sumOfWeakClassifier += _foundHypotheses[i].size();
-			vector<BaseLearner*>::iterator it = _foundHypotheses[i].begin();
-			for(;it != _foundHypotheses[i].end(); ++it )
-			{
-				alphas[i] += (*it)->getAlpha();
-			}
-		}
 		
 		int P=0,N=0;
 		int TP=0,FP=0;
@@ -1151,7 +1140,7 @@ namespace MultiBoost {
 		
 		for(int i=0; i<numOfExamples; ++i )
 		{
-			double s = (cascadeData[i].score / (alphas[cascadeData[i].classifiedInStage-1]));
+			double s = cascadeData[i].score;
 			scores[i].second = s;
 			//_output << "," << cascadeData[i].score;
 			vector<Label>& labels = pData->getLabels(i);
@@ -1164,7 +1153,7 @@ namespace MultiBoost {
 			
 		}		
 		
-		double rocScore = getROC( scores );
+		double rocScore = nor_utils::getROC( scores );
 		_output << rocScore << "\t";
 		
 		
@@ -1223,94 +1212,80 @@ namespace MultiBoost {
 			_output << "score";	
 			for(int i=0; i<numOfExamples; ++i )
 			{
-				double s = (cascadeData[i].score / (alphas[cascadeData[i].classifiedInStage-1]));
-				_output << "," << s;
-				//_output << "," << cascadeData[i].score;
+				//double s = (cascadeData[i].score / (alphas[cascadeData[i].classifiedInStage-1]));
+				_output << "," << cascadeData[i].score;
+				//_output << "," << s;
+				
 			}		
 			
 		}
 		
 	}
+	
+	// -------------------------------------------------------------------------	
+	void VJCascadeLearner::openPosteriorFile(InputData* pValid,InputData* pTest)
+	{
+		if (_outputPosteriorsFileName.empty()) return;
+		_outputPosteriors.open(_outputPosteriorsFileName.c_str());
+		
+		if ( ! _outputPosteriors.is_open() )
+		{
+			cout << "Cannot open output file" << endl;
+			exit(-1);
+		}	
+		// output the validation data labesl		
+		for(int i=0; i<pValid->getNumExamples(); ++i )
+		{
+			vector<Label>& labels = pValid->getLabels(i);
+			if (labels[_positiveLabelIndex].y>0)
+			{
+				_outputPosteriors << "1 ";
+			} else { 
+				_outputPosteriors << "0 ";
+			}						
+		}		
+		_outputPosteriors << endl << flush;
+		
+		// output the test labesl
+		if (pTest)
+		{
+			for(int i=0; i<pTest->getNumExamples(); ++i )
+			{
+				vector<Label>& labels = pTest->getLabels(i);
+				if (labels[_positiveLabelIndex].y>0)
+				{
+					_outputPosteriors << "1 ";
+				} else { 
+					_outputPosteriors << "0 ";
+				}						
+			}					
+		}
+		
+		_outputPosteriors << endl << flush;		
+	}
+	
 	// -------------------------------------------------------------------------
 	
-	double VJCascadeLearner::getROC( vector< pair< int, double > > data ) {
-		
-		//uni_pred = unique(pred);
-		//[uni_pred, idx] = sort(uni_pred, 'descend');
-		sort( data.begin(), data.end(), nor_utils::comparePair<2, float, float, greater<float> >() );
-		
-		
-		vector< double > uni_pred(data.size());
-		vector< double >::iterator it;
-		
-		int posNum = 0;
-		int negNum = 0;
-		
-		for( size_t i = 0; i < data.size(); i++ ) {
-			uni_pred[i] = data[i].second;
-			if ( data[i].first == 1 ) posNum++;
-			else negNum++;
-		}
-		
-		//copy( pred.begin(), pred.end(), uni_pred.begin() );
-		sort( uni_pred.begin(), uni_pred.end() );
-		it=unique_copy (uni_pred.begin(),uni_pred.end(),uni_pred.begin()); 
-		uni_pred.resize( it - uni_pred.begin() ); 
-		
-		reverse( uni_pred.begin(), uni_pred.end() );
-		
-		uni_pred.push_back( 0.0 );
-		int l = uni_pred.size();
-		
-		//Y = zeros(size(testY));
-		vector< int > Y( data.size() ); 
-		vector< pair< double, double > > M( uni_pred.size() );
-		
-		double x,y;
-		int TP = 0;	
-		int FP = 0;
-		
-		int j = 0;
-		for( int i = 0; i < uni_pred.size(); i++ ) {
-			double th = uni_pred[i];
-			
-			
-			while ( ( j < data.size() ) && ( data[j].second > th ) ) {
-				if ( data[j].first == 1 ) TP++;
-				if ( data[j].first == 0 ) FP++;
-				
-				j++;
-			}
-			
-			if ( FP == 0 )x = 0;
-			else x = ((double)FP)/((double)negNum);
-			
-			if ( TP == 0 )y = 0;
-			else y = ((double)TP)/((double)posNum);
-			
-			
-			M[i] = pair<double, double>(x,y);
-		}
-		
-		sort( M.begin(), M.end(), nor_utils::comparePair<1, float, float, less<float> >()  );
-		sort( M.begin(), M.end(), nor_utils::comparePair<2, float, float, less<float> >() );
-		
-		double prevX = 0.0;
-		double prevY = 0.0;
-		double ROCscore = 0.0;
-		cout.precision(10);
-		for( int i = 0; i < M.size(); i++ ) {
-			ROCscore += ((((M[i].first-prevX)*(M[i].second-prevY))/2)+(M[i].first-prevX)*prevY);
-			prevX = M[i].first;
-			prevY = M[i].second;
-			
-			//cout << ROCscore << endl;
-		}
-		ROCscore += (1-prevX)*prevY;	
-		
-		
-		return ROCscore;
+	void VJCascadeLearner::closePosteriorFile( void )
+	{
+		if (_outputPosteriorsFileName.empty()) return;
+		_outputPosteriors.close();
 	}
 	// -------------------------------------------------------------------------
-	
+	void VJCascadeLearner::outputPosteriors( vector<CascadeOutputInformation>& cascadeData )
+	{
+		if (_outputPosteriorsFileName.empty()) return;
+
+		vector<CascadeOutputInformation>::iterator it = cascadeData.begin();
+		for(;it!=cascadeData.end(); ++it)
+			_outputPosteriors << it->forecast << " ";
+		_outputPosteriors << endl << flush;
+		
+		
+		it = cascadeData.begin();
+		for(;it!=cascadeData.end(); ++it)
+			_outputPosteriors << it->score << " ";
+		_outputPosteriors << endl << flush;
+	}
+	// -------------------------------------------------------------------------
 } // end of namespace MultiBoost

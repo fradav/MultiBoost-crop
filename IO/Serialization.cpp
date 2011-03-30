@@ -146,17 +146,23 @@ namespace MultiBoost {
 	}
 	
 	// -----------------------------------------------------------------------	
-	void Serialization::appendStageSeparatorHeader( int stageIndex, int weakhypnum )
-	{
-		_shypFile << "\t<stage num=\"" << stageIndex << "\" weakhypnum=\"" <<  weakhypnum << "\">" << endl;
+	void Serialization::appendStageSeparatorHeader( int stageIndex, int weakhypnum, double threshold )
+	{		
+		//_shypFile << "\t<stage num=\""  << stageIndex << "\" weakhypnum=\"" <<  weakhypnum << "\" threshold=\""<< threshold << "\">" << endl;
+		_shypFile << "\t<stage num=\""  << stageIndex << "\">" << endl; 
+		_shypFile << "\t\t<weakhypnum>" <<  weakhypnum << "</weakhypnum>" << endl;
+		_shypFile << "\t\t<threshold>"  << threshold << "</threshold>" << endl;
+		_shypFile << "\t</stage>" << endl;
+		_shypFile << "\t<!-- ################################## -->" << endl;
 	}
 	
 	// -----------------------------------------------------------------------	
+	/*
 	void Serialization::appendStageSeparatorFooter()
 	{
-		_shypFile << "\t</stage>" << endl;
+		
 	}
-	
+	*/
 	
 	// -----------------------------------------------------------------------
 	
