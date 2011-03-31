@@ -305,10 +305,6 @@ namespace MultiBoost {
 				if (currHalfEdge > bestHalfEdge)
 				{
 					bestHalfEdge = currHalfEdge;
-					if ( bestHalfEdge < 0.0 )
-					{
-						cout << bestHalfEdge << endl;
-					}
 					bestSplitPos = currentSplitPos; 
 					bestPreviousSplitPos = previousSplitPos; 
 

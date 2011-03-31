@@ -154,7 +154,7 @@ namespace MultiBoost {
 		InputData* pTrainingData = pWeakHypothesisSource->createInputData();
 		pTrainingData->initOptions(args);
 		pTrainingData->load(_trainFileName, IT_TRAIN, _verbose);
-
+		
 		// get the testing input data, and load it
 		InputData* pTestData = NULL;
 		if ( !_testFileName.empty() )

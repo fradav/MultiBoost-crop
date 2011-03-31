@@ -41,10 +41,8 @@
 
 #include <limits>
 
-
 // ------------------------------------------------------------------------
 namespace MultiBoost {
-
 
 void SortedData::load(const string& fileName, eInputType inputType, int verboseLevel)
 {
@@ -119,32 +117,32 @@ void SortedData::load(const string& fileName, eInputType inputType, int verboseL
 
 // ------------------------------------------------------------------------
 
-  // XXX fradav "old" optimized filter function cleaned of its O(log n) set::find()
-  // using the new _rawIndices vector and untouched typo ;-)
-  pair<vpIterator,vpIterator> SortedData::getFileteredBeginEnd(int colIdx) {
-    _filteredColumn.clear();
-    for( column::iterator it = _sortedData[colIdx].begin(); it != _sortedData[colIdx].end(); it ++ ) {
-      if ( this->isUsedIndice( it->first ) && ( it->second == it->second ) ) {
-	int i = this->getOrderBasedOnRawIndex( it->first );
-	_filteredColumn.push_back( pair<int, float>(i, it->second) );
-      }
-      return make_pair(_filteredColumn.begin(),_filteredColumn.end());
-    }
-  }
-  
+pair<vpIterator,vpIterator> SortedData::getFileteredBeginEnd(int colIdx) {
+	_filteredColumn.clear();
+	for( column::iterator it = _sortedData[colIdx].begin(); it != _sortedData[colIdx].end(); it ++ ) {
+		set<int>::iterator setIt = this->_usedIndices.find( (*it).first ); 
+		if ( ( setIt != this->_usedIndices.end() ) && ( it->second == it->second ) ) {
+			int i = this->getOrderBasedOnRawIndex( it->first );
+			_filteredColumn.push_back( pair<int, float>(i, it->second) );
+		}
+	}
+	return make_pair(_filteredColumn.begin(),_filteredColumn.end());
+}
+
 // ------------------------------------------------------------------------
 
-    pair<vpReverseIterator,vpReverseIterator> SortedData::getFileteredReverseBeginEnd(int colIdx) {
-      _filteredColumn.clear();
-      for( column::iterator it = _sortedData[colIdx].begin(); it != _sortedData[colIdx].end(); it ++ ) {
-	if ( this->isUsedIndice( it->first ) && ( it->second == it->second ) ) {
-	  int i = this->getOrderBasedOnRawIndex( it->first );
-	    _filteredColumn.push_back( pair<int, float>(i, it->second) );
+pair<vpReverseIterator,vpReverseIterator> SortedData::getFileteredReverseBeginEnd(int colIdx) {
+	_filteredColumn.clear();
+	for( column::iterator it = _sortedData[colIdx].begin(); it != _sortedData[colIdx].end(); it ++ ) {
+		set<int>::iterator setIt = this->_usedIndices.find( (*it).first ); 
+		if ( ( setIt != this->_usedIndices.end() ) && ( it->second == it->second )  ) {
+			int i = this->getOrderBasedOnRawIndex( it->first );
+			_filteredColumn.push_back( pair<int, float>(i, it->second) );
+		}
 	}
-      }
-      return make_pair(_filteredColumn.rbegin(),_filteredColumn.rend());
-    }
-    
+	return make_pair(_filteredColumn.rbegin(),_filteredColumn.rend());
+}
+
 
 /*
 pair<vpIterator,vpIterator> SortedData::getFileteredBeginEnd(int colIdx) {
