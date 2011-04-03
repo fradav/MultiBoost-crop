@@ -123,12 +123,6 @@ namespace MultiBoost {
 		if ( sHypothesisName.compare( "AdaBoostMH" ) == 0)
 		{
 			sHypothesis = new AdaBoostMHLearner();
-		} else if ( sHypothesisName.compare( "BrownBoost" ) == 0 )
-		{
-			//sHypothesis = new BrownBoostLearner();
-		} else if ( sHypothesisName.compare( "LogitBoost" ) == 0 )
-		{
-			//sHypothesis = new LogitBoostLearner();
 		} else if ( sHypothesisName.compare( "FilterBoost" ) == 0 ) {
 			sHypothesis = new FilterBoostLearner();
 		}  else if ( sHypothesisName.compare( "VJcascade" ) == 0 ) {

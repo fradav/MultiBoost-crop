@@ -996,9 +996,9 @@ namespace MultiBoost {
 				pOutInfo->outputIteration(t);
 				pOutInfo->outputError(pData, currWeakHyp);
 				
-				pOutInfo->outputBalancedError(pData, currWeakHyp);
+				//pOutInfo->outputBalancedError(pData);
 				if ( ( t % 1 ) == 0 ) {
-					pOutInfo->outputROC(pData, currWeakHyp);
+					pOutInfo->outputROC(pData);
 				}
 
 				// Margins and edge requires an update of the weight,
